@@ -26,7 +26,7 @@ def ping():
 def run():
     flask_app.run(host="0.0.0.0", port=10000)
 
-threading.Thread(target=run).start()
+threading.Thread(target=run, daemon=True).start()
 
 # --- START BUTTON UI ---
 def start_buttons():
