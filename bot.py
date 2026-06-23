@@ -19,6 +19,10 @@ flask_app = Flask(__name__)
 def home():
     return "Bot is Running 🚀"
 
+@flask_app.route("/ping")
+def ping():
+    return "Alive 🔥"
+
 def run():
     flask_app.run(host="0.0.0.0", port=10000)
 
