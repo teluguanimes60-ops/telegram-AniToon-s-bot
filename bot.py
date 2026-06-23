@@ -2,6 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import BOT_TOKEN, API_ID, API_HASH
 from flask import Flask
+user_data = {}
 import threading
 
 # --- BOT SETUP ---
@@ -18,8 +19,8 @@ flask_app = Flask(__name__)
 @flask_app.route("/")
 def home():
     return "Bot is Running 🚀"
-
-@flask_app.route("/ping")
+    
+    @flask_app.route("/ping")
 def ping():
     return "Alive 🔥"
 
@@ -49,34 +50,84 @@ async def start(client, message):
         reply_markup=start_buttons()
     )
 
+@app.on_message(filters.text & ~filters.command(["start"]))
+async def get_filename(client, message):
+    user_id = message.from_user.id
+
+    if user_id not in user_data:
+        return
+
+    user_data[user_id]["new_name"] = message.text
+
+    from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("MP4 🎬", callback_data="mp4"),
+            InlineKeyboardButton("MKV 🎥", callback_data="mkv")
+        ],
+        [
+            InlineKeyboardButton("MP3 🎵", callback_data="mp3")
+        ]
+    ])
+
+    await message.reply_text(
+        "🎯 Choose format:",
+        reply_markup=buttons
+    )
+    
 # --- BUTTON HANDLER ---
 @app.on_callback_query()
 async def buttons(client, query):
-    data = query.data  # ✅ important fix
+    data = query.data
+    user_id = query.from_user.id
 
-    if data == "rename":
-        await query.message.edit_text(
-            "📁 Send me a file to rename.",
-            reply_markup=back_button()
-        )
+    # --- FORMAT SELECT ---
+    if data in ["mp4", "mkv", "mp3"]:
+        if user_id not in user_data:
+            return
+
+        file_msg = user_data[user_id]["file_msg"]
+        new_name = user_data[user_id]["new_name"]
+
+        await query.message.edit_text("⏳ Processing...")
+
+        file_path = await file_msg.download()
+
+        import os
+        new_file = f"{new_name}.{data}"
+        new_path = os.path.join(os.path.dirname(file_path), new_file)
+
+        os.rename(file_path, new_path)
+
+        await query.message.reply_document(new_path)
+
+        os.remove(new_path)
+        del user_data[user_id]
+
+        await query.message.reply_text("✅ Done!")
+
+    # --- MENU BUTTONS ---
+    elif data == "rename":
+        await query.message.edit_text("📁 Send file")
 
     elif data == "help":
-        await query.message.edit_text(
-            "ℹ️ How to use:\n\n1. Click Rename\n2. Send file\n3. Get renamed file (next update)",
-            reply_markup=back_button()
-        )
+        await query.message.edit_text("Send file → enter name → choose format")
 
     elif data == "back":
-        await query.message.edit_text(
-            "🏠 Main Menu:",
-            reply_markup=start_buttons()
-        )
+        await query.message.edit_text("Main menu")
 
 # --- FILE HANDLER ---
 @app.on_message(filters.document | filters.video | filters.audio)
-async def file_handler(client, message):
+async def get_file(client, message):
+    user_id = message.from_user.id
+
+    user_data[user_id] = {
+        "file_msg": message
+    }
+
     await message.reply_text(
-        f"📁 File received: {message.document.file_name if message.document else 'Media'}\n\nRename feature coming soon 🔧"
+        "📁 File received!\n\nSend new file name (without extension)\nExample: movie"
     )
 
 print("🚀 Bot started...")
