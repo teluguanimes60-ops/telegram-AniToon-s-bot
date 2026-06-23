@@ -1,13 +1,11 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import BOT_TOKEN, API_ID, API_HASH
-import os, time
 from flask import Flask
-import threading
+import threading, os, time
 
-app = Client("rename_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client("probot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# ===== Flask keep alive =====
 flask_app = Flask(__name__)
 
 @flask_app.route("/")
@@ -19,88 +17,95 @@ def run():
 
 threading.Thread(target=run).start()
 
-# ===== START =====
+USER_DATA = {}
+THUMBNAILS = {}
+
+# START
 @app.on_message(filters.command("start"))
 async def start(client, message):
     buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
+        [InlineKeyboardButton("📁 Rename", callback_data="rename")],
         [InlineKeyboardButton("🖼 Set Thumbnail", callback_data="thumb")]
     ])
-    await message.reply_text("👋 Welcome to PRO Rename Bot", reply_markup=buttons)
+    await message.reply_text("🔥 PRO MAX Rename Bot\nChoose option:", reply_markup=buttons)
 
-# ===== BUTTON HANDLER =====
-user_data = {}
-
+# BUTTON HANDLER
 @app.on_callback_query()
 async def buttons(client, query):
     data = query.data
 
     if data == "rename":
-        user_data[query.from_user.id] = {"mode": "rename"}
-        await query.message.edit_text("📁 Send file to rename")
+        await query.message.edit_text("📤 Send file to rename")
 
     elif data == "thumb":
-        user_data[query.from_user.id] = {"mode": "thumb"}
-        await query.message.edit_text("🖼 Send photo as thumbnail")
+        await query.message.edit_text("🖼 Send image to set as thumbnail")
 
-# ===== SAVE THUMB =====
+# SET THUMBNAIL
 @app.on_message(filters.photo)
 async def save_thumb(client, message):
-    uid = message.from_user.id
-    if user_data.get(uid, {}).get("mode") == "thumb":
-        path = f"{uid}_thumb.jpg"
-        await message.download(path)
-        user_data[uid]["thumb"] = path
-        await message.reply_text("✅ Thumbnail saved!")
+    user_id = message.from_user.id
+    path = await message.download()
+    THUMBNAILS[user_id] = path
+    await message.reply_text("✅ Thumbnail saved!")
 
-# ===== FILE HANDLER =====
+# RECEIVE FILE
 @app.on_message(filters.document | filters.video | filters.audio)
+async def get_file(client, message):
+    USER_DATA[message.from_user.id] = message
+
+    size = round(message.document.file_size / (1024*1024), 2) if message.document else "?"
+    await message.reply_text(f"📁 File received\nSize: {size} MB\n\n✏️ Send new name")
+
+# RENAME
+@app.on_message(filters.text & ~filters.command("start"))
 async def rename_file(client, message):
-    uid = message.from_user.id
+    user_id = message.from_user.id
 
-    if user_data.get(uid, {}).get("mode") != "rename":
+    if user_id not in USER_DATA:
         return
 
-    file = message.document or message.video or message.audio
-
-    msg = await message.reply_text("⬇️ Downloading...")
-
-    start = time.time()
-    file_path = await message.download()
-
-    await msg.edit_text("✏️ Send new file name")
-    user_data[uid]["file"] = file_path
-    user_data[uid]["msg"] = msg
-
-# ===== NEW NAME =====
-@app.on_message(filters.text & ~filters.command(["start"]))
-async def get_name(client, message):
-    uid = message.from_user.id
-
-    if uid not in user_data or "file" not in user_data[uid]:
-        return
-
+    old_msg = USER_DATA[user_id]
     new_name = message.text
-    old_path = user_data[uid]["file"]
-    new_path = new_name
 
-    os.rename(old_path, new_path)
+    file = old_msg.document or old_msg.video or old_msg.audio
 
-    msg = user_data[uid]["msg"]
-    await msg.edit_text("⬆️ Uploading...")
+    path = await old_msg.download()
+    new_path = f"./{new_name}"
 
-    thumb = user_data[uid].get("thumb")
+    os.rename(path, new_path)
 
-    await message.reply_document(
-        new_path,
-        thumb=thumb if thumb else None
+    progress_msg = await message.reply_text("📥 Processing...")
+
+    start_time = time.time()
+
+    thumb = THUMBNAILS.get(user_id, None)
+
+    await client.send_document(
+        chat_id=message.chat.id,
+        document=new_path,
+        thumb=thumb,
+        progress=progress,
+        progress_args=(progress_msg, start_time)
     )
 
     os.remove(new_path)
+    del USER_DATA[user_id]
 
-    await msg.delete()
-    await message.reply_text("✅ Done!")
+# PROGRESS BAR
+async def progress(current, total, msg, start):
+    percent = current * 100 / total
+    speed = current / (time.time() - start + 1)
+    bar = "█" * int(percent / 10) + "░" * (10 - int(percent / 10))
 
-# ===== RUN =====
-print("🚀 Bot Running...")
+    try:
+        await msg.edit_text(
+            f"📤 Uploading...\n\n"
+            f"[{bar}]\n"
+            f"{percent:.1f}%\n"
+            f"⚡ Speed: {round(speed/1024,2)} KB/s"
+        )
+    except:
+        pass
+
+print("🚀 PRO MAX BOT RUNNING")
 app.run()
