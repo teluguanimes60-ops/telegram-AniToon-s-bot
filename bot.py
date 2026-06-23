@@ -1,106 +1,106 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import BOT_TOKEN, API_ID, API_HASH
+import os, time
 from flask import Flask
 import threading
-import os
 
-app = Client(
-    "ProRenameBot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    bot_token=BOT_TOKEN
-)
+app = Client("rename_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
+# ===== Flask keep alive =====
 flask_app = Flask(__name__)
 
 @flask_app.route("/")
 def home():
-    return "🔥 Ultra Pro Bot Running"
+    return "Bot Running 🚀"
 
 def run():
     flask_app.run(host="0.0.0.0", port=10000)
 
 threading.Thread(target=run).start()
 
-# store user data
-users = {}
-
-# START
+# ===== START =====
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    await message.reply_text(
-        "👋 Send me a file to rename (Ultra Pro Mode)"
-    )
-
-# RECEIVE FILE
-@app.on_message(filters.document | filters.video | filters.audio)
-async def file_received(client, message):
-    users[message.from_user.id] = {"file": message}
-
     buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✏️ Rename", callback_data="rename")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="cancel")]
+        [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
+        [InlineKeyboardButton("🖼 Set Thumbnail", callback_data="thumb")]
     ])
+    await message.reply_text("👋 Welcome to PRO Rename Bot", reply_markup=buttons)
 
-    await message.reply_text(
-        "📁 File received!\nChoose option:",
-        reply_markup=buttons
-    )
+# ===== BUTTON HANDLER =====
+user_data = {}
 
-# BUTTON HANDLER
 @app.on_callback_query()
-async def button_handler(client, query):
-    user_id = query.from_user.id
+async def buttons(client, query):
+    data = query.data
 
-    if query.data == "rename":
-        await query.message.edit_text(
-            "✏️ Send new file name with extension\nExample: movie.mkv"
-        )
+    if data == "rename":
+        user_data[query.from_user.id] = {"mode": "rename"}
+        await query.message.edit_text("📁 Send file to rename")
 
-    elif query.data == "cancel":
-        users.pop(user_id, None)
-        await query.message.edit_text("❌ Cancelled")
+    elif data == "thumb":
+        user_data[query.from_user.id] = {"mode": "thumb"}
+        await query.message.edit_text("🖼 Send photo as thumbnail")
 
-# RENAME PROCESS
-@app.on_message(filters.text)
-async def rename_process(client, message):
-    user_id = message.from_user.id
+# ===== SAVE THUMB =====
+@app.on_message(filters.photo)
+async def save_thumb(client, message):
+    uid = message.from_user.id
+    if user_data.get(uid, {}).get("mode") == "thumb":
+        path = f"{uid}_thumb.jpg"
+        await message.download(path)
+        user_data[uid]["thumb"] = path
+        await message.reply_text("✅ Thumbnail saved!")
 
-    if user_id not in users:
+# ===== FILE HANDLER =====
+@app.on_message(filters.document | filters.video | filters.audio)
+async def rename_file(client, message):
+    uid = message.from_user.id
+
+    if user_data.get(uid, {}).get("mode") != "rename":
+        return
+
+    file = message.document or message.video or message.audio
+
+    msg = await message.reply_text("⬇️ Downloading...")
+
+    start = time.time()
+    file_path = await message.download()
+
+    await msg.edit_text("✏️ Send new file name")
+    user_data[uid]["file"] = file_path
+    user_data[uid]["msg"] = msg
+
+# ===== NEW NAME =====
+@app.on_message(filters.text & ~filters.command(["start"]))
+async def get_name(client, message):
+    uid = message.from_user.id
+
+    if uid not in user_data or "file" not in user_data[uid]:
         return
 
     new_name = message.text
-    old_msg = users[user_id]["file"]
-
-    file = old_msg.document or old_msg.video or old_msg.audio
-
-    status = await message.reply_text("⬇️ Downloading...")
-
-    file_path = await old_msg.download()
-
-    await status.edit("✏️ Renaming...")
-
+    old_path = user_data[uid]["file"]
     new_path = new_name
-    os.rename(file_path, new_path)
 
-    await status.edit("⬆️ Uploading...")
+    os.rename(old_path, new_path)
 
-    # thumbnail for video
-    thumb = None
-    if old_msg.video and old_msg.video.thumbs:
-        thumb = await old_msg.download(old_msg.video.thumbs[0].file_id)
+    msg = user_data[uid]["msg"]
+    await msg.edit_text("⬆️ Uploading...")
+
+    thumb = user_data[uid].get("thumb")
 
     await message.reply_document(
-        document=new_path,
-        caption="✅ Done!",
-        thumb=thumb
+        new_path,
+        thumb=thumb if thumb else None
     )
 
-    await status.edit("✅ Completed")
-
     os.remove(new_path)
-    users.pop(user_id)
 
-print("🚀 Ultra Pro Bot Started")
+    await msg.delete()
+    await message.reply_text("✅ Done!")
+
+# ===== RUN =====
+print("🚀 Bot Running...")
 app.run()
