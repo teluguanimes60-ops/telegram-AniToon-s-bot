@@ -1,39 +1,41 @@
 from pyrogram import Client, filters
-from config import BOT_TOKEN, API_ID, API_HASH
+from config import API_ID, API_HASH, BOT_TOKEN
 from flask import Flask
 import threading
 
+# ---------------- BOT ----------------
 app = Client(
-    "RenameBot",
+    "AniToonBot",
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN
 )
 
-flask_app = Flask(__name__)
+# ---------------- FLASK KEEP ALIVE ----------------
+server = Flask(__name__)
 
-@flask_app.route("/")
+@server.route("/")
 def home():
-    return "Bot is Running 🚀"
+    return "Bot is alive 🚀"
 
-# keep alive server (Render requirement)
-def run():
-    flask_app.run(host="0.0.0.0", port=10000)
+def run_flask():
+    server.run(host="0.0.0.0", port=10000)
 
-threading.Thread(target=run).start()
+threading.Thread(target=run_flask).start()
 
-# /start command
+# ---------------- HANDLERS ----------------
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    await message.reply_text("👋 Hello! Send me a file to rename.")
+    await message.reply_text("👋 Bot is running on Render!")
 
-# file handler
 @app.on_message(filters.document | filters.video | filters.audio)
-async def rename(client, message):
+async def file_handler(client, message):
     file = message.document or message.video or message.audio
+    name = file.file_name if file else "unknown"
+
     await message.reply_text(
-        f"📁 File received:\nName: {file.file_name}\n\nRename feature coming next version 🔧"
+        f"📁 File received!\n\nName: {name}\n\n✅ Bot is working fine on Render"
     )
 
-print("🚀 Bot is running...")
+print("🚀 Bot Started")
 app.run()
