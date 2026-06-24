@@ -112,7 +112,6 @@ file_path = await file_msg.download(
     progress=progress,
     progress_args=(query.message, start, "⬇️ Downloading...")
 )
-
         import os
         new_file = f"{new_name}.{data}"
         new_path = os.path.join(os.path.dirname(file_path), new_file)
