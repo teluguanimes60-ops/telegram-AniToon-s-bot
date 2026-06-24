@@ -47,14 +47,14 @@ def run():
 threading.Thread(target=run, daemon=True).start()
 
 # ---------------- BUTTONS ----------------
-def start_buttons():
+def main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
         [InlineKeyboardButton("⚡ Instant Edit", callback_data="instant")],
         [InlineKeyboardButton("🖼 Set Thumbnail", callback_data="thumb")],
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ])
-    
+
 def back_btn():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
@@ -64,7 +64,7 @@ def back_btn():
 @app.on_message(filters.command("start"))
 async def start(client, message):
     await message.reply_text(
-        "🔥 **AniToon Bot**\n\nChoose an option:",
+        "🔥 AniToon Bot\n\nChoose an option:",
         reply_markup=main_menu()
     )
 
@@ -73,22 +73,35 @@ async def start(client, message):
 async def cb(client, query):
     data = query.data
 
-    elif data == "instant":
-    await query.message.edit_text(
-        "⚡ Send file and reply with /instant"
-    )
-    
-    if data == "back":
-        await query.message.edit_text("Main Menu", reply_markup=main_menu())
-
-    elif data == "help":
-        await query.message.edit_text(HELP_TEXT, reply_markup=back_btn())
+    if data == "instant":
+        await query.message.edit_text(
+            "⚡ Send file and reply with /instant",
+            reply_markup=back_btn()
+        )
 
     elif data == "rename":
-        await query.message.edit_text("📁 Send file to rename", reply_markup=back_btn())
+        await query.message.edit_text(
+            "📁 Send file to rename",
+            reply_markup=back_btn()
+        )
 
     elif data == "thumb":
-        await query.message.edit_text("🖼 Send photo to set thumbnail", reply_markup=back_btn())
+        await query.message.edit_text(
+            "🖼 Send photo to set thumbnail",
+            reply_markup=back_btn()
+        )
+
+    elif data == "help":
+        await query.message.edit_text(
+            HELP_TEXT,
+            reply_markup=back_btn()
+        )
+
+    elif data == "back":
+        await query.message.edit_text(
+            "Main Menu",
+            reply_markup=main_menu()
+        )
 
 # ---------------- FILE RECEIVE ----------------
 @app.on_message(filters.document | filters.video | filters.audio)
@@ -101,8 +114,8 @@ async def file_handler(client, message):
 
     await message.reply_text("📁 Send new file name (without extension)")
 
-# ---------------- RENAME LOGIC ----------------
-@app.on_message(filters.text & ~filters.command(["start"]))
+# ---------------- RENAME ----------------
+@app.on_message(filters.text & ~filters.command(["start", "instant"]))
 async def rename_file(client, message):
     user_id = message.from_user.id
 
@@ -122,7 +135,6 @@ async def rename_file(client, message):
         progress_args=(msg, start_time, "📥 Downloading")
     )
 
-    # KEEP ORIGINAL EXTENSION
     ext = file_path.split(".")[-1]
     new_path = f"{os.path.splitext(file_path)[0]}_{new_name}.{ext}"
 
@@ -131,7 +143,7 @@ async def rename_file(client, message):
     thumb = get_thumb()
     start_time = time.time()
 
-    # AUTO SEND TYPE
+    # SEND
     if file_msg.video:
         await message.reply_video(
             new_path,
@@ -160,13 +172,14 @@ async def rename_file(client, message):
 
     await message.reply_text("✅ Done!", reply_markup=main_menu())
 
-# ---------------- THUMBNAIL ----------------
+# ---------------- THUMB ----------------
 @app.on_message(filters.photo)
 async def thumb_handler(client, message):
     path = await message.download()
     save_thumb(path)
     await message.reply_text("✅ Thumbnail Saved")
 
+# ---------------- INSTANT ----------------
 @app.on_message(filters.command("instant"))
 async def instant_cmd(client, message):
     await instant_edit(client, message)
