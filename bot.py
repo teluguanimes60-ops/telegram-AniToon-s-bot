@@ -82,10 +82,10 @@ async def cb(client, query):
     if data == "back":
         await query.message.edit_text("Main Menu", reply_markup=main_menu())
 
-    elif data == "help":
-        await query.message.edit_text(
-            reply_markup=back_btn()
-        )
+await query.message.edit_text(
+    "ℹ️ Help Menu",
+    reply_markup=back_btn()
+)
 
     elif data == "rename":
         await query.message.edit_text("📁 Send file to rename", reply_markup=back_btn())
