@@ -84,7 +84,7 @@ async def cb(client, query):
 
     elif data == "help":
         await query.message.edit_text(
-            HELP_TEXT + "\n\n
+            HELP_TEXT 
             reply_markup=back_btn()
         )
 
