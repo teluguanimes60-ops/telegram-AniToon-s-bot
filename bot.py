@@ -4,8 +4,9 @@ from config import BOT_TOKEN, API_ID, API_HASH
 from flask import Flask
 flask_app = Flask(__name__)
 user_data = {}
-import threading
+import os
 import time
+import threading
 
 async def progress(current, total, message, start, text):
     now = time.time()
@@ -112,7 +113,6 @@ file_path = await file_msg.download(
     progress=progress,
     progress_args=(query.message, start, "⬇️ Downloading...")
 )
-        import os
         new_file = f"{new_name}.{data}"
         new_path = os.path.join(os.path.dirname(file_path), new_file)
 
