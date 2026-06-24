@@ -123,7 +123,7 @@ await query.message.reply_document(
     thumb=thumb
 )
 
-os.remove(new_path)
+        os.remove(new_path)
         del user_data[user_id]
 
         await query.message.reply_text("✅ Done!")
