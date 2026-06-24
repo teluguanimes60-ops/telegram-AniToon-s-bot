@@ -146,6 +146,10 @@ async def text_handler(client, message):
 
         thumb = get_thumb()
 
+        # if user NOT set thumbnail → auto generate from video
+        if not thumb and file_msg.video:
+            thumb = generate_thumbnail(new_path if 'new_path' in locals() else file_path)
+
         # AUTO THUMB if not set
         if not thumb and file_msg.video:
             thumb = None
@@ -156,6 +160,11 @@ async def text_handler(client, message):
             thumb=thumb
         )
 
+        if thumb and thumb.endswith(".jpg") and "thumb.jpg" not in thumb:
+    try:
+        os.remove(thumb)
+    except:
+        pass
         os.remove(new_path)
 
         await status.delete()
