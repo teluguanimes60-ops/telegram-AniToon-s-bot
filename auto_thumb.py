@@ -7,6 +7,8 @@ def get_ffmpeg():
             return f"./{file}/ffmpeg"
     return "ffmpeg"
 
+FFMPEG_PATH = get_ffmpeg()
+
 def generate_thumbnail(video_path):
     thumb_path = video_path + ".jpg"
 
