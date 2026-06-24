@@ -1,23 +1,19 @@
 HELP_TEXT = """
-📌 **How to Use Bot**
+📌 How to use:
 
-1. Send a file
-2. Send new name
-3. Choose format
-4. Get renamed file
+1. Click Rename
+2. Send file
+3. Send new name
+4. Done ✅
 
 🖼 Thumbnail:
-- Send photo to save thumbnail
-
-🎬 Supported:
-- Video
-- Audio
-- Documents
+Send photo to set thumbnail
 
 ⚡ Features:
-- Fast processing
-- Progress bar + speed + ETA
-- Custom thumbnail
+- Fast rename
+- Progress bar
+- Speed + ETA
+- Auto file type
 
-👨‍💻 Made by AniToon
+Powerded By: @AniToon_Edit
 """
