@@ -4,11 +4,11 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import API_ID, API_HASH, BOT_TOKEN
 import os
 import threading
+from flask import Flask
 
 from thumbnail import save_thumb, get_thumb
-from flask import Flask
-import threading
 
+# ---------------- FLASK (ONLY ONE) ----------------
 web = Flask(__name__)
 
 @web.route("/")
@@ -16,22 +16,10 @@ def home():
     return "Bot Alive ✅"
 
 def run_web():
-    web.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    web.run(host="0.0.0.0", port=port)
 
 threading.Thread(target=run_web).start()
-
-# ---------------- FLASK (FOR RENDER FREE) ----------------
-flask_app = Flask(__name__)
-
-@flask_app.route("/")
-def home():
-    return "Bot Running 🚀"
-
-def run():
-    port = int(os.environ.get("PORT", 10000))
-    flask_app.run(host="0.0.0.0", port=port)
-
-threading.Thread(target=run).start()
 
 # ---------------- BOT ----------------
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
@@ -86,17 +74,14 @@ async def cb(client, query):
 
     elif data == "edit":
         user_data[user_id] = {"mode": "edit"}
-        await query.message.edit_text("✏️ Send file to edit caption", reply_markup=back_btn())
+        await query.message.edit_text("✏️ Send file", reply_markup=back_btn())
 
     elif data == "thumb":
         user_data[user_id] = {"mode": "thumb"}
         await query.message.edit_text("🖼 Send photo", reply_markup=back_btn())
 
     elif data == "help":
-        await query.message.edit_text(
-            "📌 Send file → choose option → done",
-            reply_markup=back_btn()
-        )
+        await query.message.edit_text("📌 Send file → choose option → done", reply_markup=back_btn())
 
     elif data == "pause":
         user_data.setdefault(user_id, {})["pause"] = True
@@ -155,7 +140,6 @@ async def text_handler(client, message):
     except:
         pass
 
-    # ---------------- RENAME ----------------
     if data["mode"] == "rename":
         new_name = message.text.strip()
 
@@ -184,7 +168,6 @@ async def text_handler(client, message):
         else:
             await client.send_document(message.chat.id, new_path, thumb=thumb)
 
-        # delete auto thumb
         if thumb and isinstance(thumb, str):
             try:
                 if os.path.exists(thumb) and "thumb" not in thumb:
@@ -199,12 +182,8 @@ async def text_handler(client, message):
 
         await status.delete()
 
-    # ---------------- EDIT CAPTION ----------------
     elif data["mode"] == "edit":
-        await file_msg.copy(
-            chat_id=message.chat.id,
-            caption=message.text
-        )
+        await file_msg.copy(chat_id=message.chat.id, caption=message.text)
 
     user_data.pop(user_id, None)
 
