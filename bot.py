@@ -98,7 +98,7 @@ async def buttons(client, query):
     user_id = query.from_user.id
 
     # --- FORMAT SELECT ---
-    if data in ["mp4", "mkv", "mp3"]:
+if data in ["mp4", "mkv", "mp3"]:
     if user_id not in user_data:
         return
 
