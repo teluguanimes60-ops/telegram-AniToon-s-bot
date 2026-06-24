@@ -7,6 +7,18 @@ import threading
 
 from thumbnail import save_thumb, get_thumb
 from flask import Flask
+import threading
+
+web = Flask(__name__)
+
+@web.route("/")
+def home():
+    return "Bot Alive ✅"
+
+def run_web():
+    web.run(host="0.0.0.0", port=10000)
+
+threading.Thread(target=run_web).start()
 
 # ---------------- FLASK (FOR RENDER FREE) ----------------
 flask_app = Flask(__name__)
