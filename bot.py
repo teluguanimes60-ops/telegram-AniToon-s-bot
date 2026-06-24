@@ -98,22 +98,22 @@ async def buttons(client, query):
     data = query.data
     user_id = query.from_user.id
 
-# --- FORMAT SELECT ---
-if data in ["mp4", "mkv", "mp3"]:
-    if user_id not in user_data:
-        return
+    # --- FORMAT SELECT ---
+    if data in ["mp4", "mkv", "mp3"]:
+        if user_id not in user_data:
+            return
 
-    file_msg = user_data[user_id]["file_msg"]
-    new_name = user_data[user_id]["new_name"]
-    
-    await query.message.edit_text("⏳ Processing...")
+        file_msg = user_data[user_id]["file_msg"]
+        new_name = user_data[user_id]["new_name"]
 
-    file_path = await file_msg.download()
+        await query.message.edit_text("⏳ Processing...")
 
-    new_file = f"{new_name}.{data}"
-    new_path = os.path.join(os.path.dirname(file_path), new_file)
+        file_path = await file_msg.download()
 
-    os.rename(file_path, new_path)
+        new_file = f"{new_name}.{data}"
+        new_path = os.path.join(os.path.dirname(file_path), new_file)
+
+        os.rename(file_path, new_path)
 
         thumb = get_thumb()
 
