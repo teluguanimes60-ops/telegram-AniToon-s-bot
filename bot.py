@@ -10,9 +10,8 @@ from help_text import HELP_TEXT
 flask_app = Flask(__name__)
 user_data = {}
 
-CHANNEL = "https://t.me/Anitoon_edit"
+CHANNEL = "https://t.me/Anitoon_edit/33"
 
-# ---------------- CANCEL CONTROL ----------------
 cancel_flag = {}
 
 # ---------------- PROGRESS ----------------
@@ -23,24 +22,20 @@ async def progress(current, total, message, start, text):
         raise Exception("Cancelled")
 
     diff = time.time() - start
-    if diff < 1:
+    if diff < 0.5:
         return
 
     percent = current * 100 / total
-    speed = current / diff
-    eta = (total - current) / speed if speed > 0 else 0
-
-    speed_text = (
-        f"{speed/1024/1024:.2f} MB/s"
-        if speed > 1024*1024 else f"{speed/1024:.2f} KB/s"
-    )
+    speed = current / diff if diff else 0
+    eta = (total - current) / speed if speed else 0
 
     mins, secs = divmod(int(eta), 60)
-    bar = "█" * int(percent // 10) + "░" * (10 - int(percent // 10))
+
+    bar = "█" * int(percent // 10) + "▒" * (10 - int(percent // 10))
 
     try:
         await message.edit_text(
-            f"{text}\n\n[{bar}] {percent:.1f}%\n⚡ {speed_text}\n⏳ {mins}m {secs}s\n\n🔗 {CHANNEL}"
+            f"{text}\n\n[{bar}] {percent:.1f}%\n⏳ {mins}m {secs}s\n\n🔗 {CHANNEL}"
         )
     except:
         pass
@@ -48,6 +43,7 @@ async def progress(current, total, message, start, text):
 
 # ---------------- BOT ----------------
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+
 
 # ---------------- KEEP ALIVE ----------------
 @flask_app.route("/")
@@ -66,7 +62,7 @@ def main_menu():
         [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
         [InlineKeyboardButton("🔄 Convert", callback_data="convert")],
         [InlineKeyboardButton("🖼 Thumbnail", callback_data="thumb")],
-        [InlineKeyboardButton("⚡ Instant Edit", callback_data="instant")],
+        [InlineKeyboardButton("⚡ Instant Rename", callback_data="instant")],
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")],
         [InlineKeyboardButton("🔗 Channel", url=CHANNEL)]
     ])
@@ -81,7 +77,7 @@ def convert_menu():
     ])
 
 
-def processing_btn(uid):
+def process_btn(uid):
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🔗 Channel", url=CHANNEL),
@@ -101,7 +97,7 @@ def back_btn():
 @app.on_message(filters.command("start"))
 async def start(client, message):
     await message.reply_text(
-        "🔥 **AniToon Bot**\n\nSelect option:",
+        "🔥 **AniToon Bot**",
         reply_markup=main_menu()
     )
 
@@ -113,7 +109,6 @@ async def cb(client, query):
     data = query.data
     uid = query.from_user.id
 
-    # ---------------- CANCEL ----------------
     if data.startswith("cancel_"):
         cancel_flag[uid] = True
         await query.message.edit_text("❌ Cancelled", reply_markup=back_btn())
@@ -129,23 +124,20 @@ async def cb(client, query):
         user_data[uid] = {"mode": "rename"}
         await query.message.edit_text("📁 Send file to rename", reply_markup=back_btn())
 
-    elif data == "thumb":
-        await query.message.edit_text("🖼 Send photo to set thumbnail", reply_markup=back_btn())
-
     elif data == "instant":
         user_data[uid] = {"mode": "instant"}
-        await query.message.edit_text("⚡ Send file then text", reply_markup=back_btn())
+        await query.message.edit_text("⚡ Send file (fast rename mode)", reply_markup=back_btn())
 
     elif data == "convert":
         await query.message.edit_text("🔄 Choose convert type:", reply_markup=convert_menu())
 
     elif data == "file_to_video":
         user_data[uid] = {"mode": "file_to_video"}
-        await query.message.edit_text("📄 Send file to convert into video", reply_markup=back_btn())
+        await query.message.edit_text("📄 Send file", reply_markup=back_btn())
 
     elif data == "video_to_file":
         user_data[uid] = {"mode": "video_to_file"}
-        await query.message.edit_text("🎬 Send video to convert into file", reply_markup=back_btn())
+        await query.message.edit_text("🎬 Send video", reply_markup=back_btn())
 
 
 # ---------------- FILE HANDLER ----------------
@@ -153,15 +145,7 @@ async def cb(client, query):
 async def file_handler(client, message):
     uid = message.from_user.id
 
-    # RESET CANCEL ON NEW TASK
     cancel_flag[uid] = False
-
-    # DELETE OLD STATE MESSAGE (if exists)
-    try:
-        if "msg" in user_data.get(uid, {}):
-            await user_data[uid]["msg"].delete()
-    except:
-        pass
 
     mode = user_data.get(uid, {}).get("mode", "rename")
 
@@ -171,9 +155,9 @@ async def file_handler(client, message):
     }
 
     if mode == "rename":
-        await message.reply_text("✏️ Send new file name")
+        await message.reply_text("✏️ Send file name (without extension)")
     elif mode == "instant":
-        await message.reply_text("⚡ Send text for instant edit")
+        await message.reply_text("⚡ Send file name (fast rename)")
     else:
         await process_file(client, message)
 
@@ -183,7 +167,6 @@ async def process_file(client, message):
     uid = message.from_user.id
 
     if cancel_flag.get(uid):
-        await message.reply_text("❌ Cancelled")
         return
 
     data = user_data.get(uid)
@@ -195,35 +178,29 @@ async def process_file(client, message):
 
     msg = await message.reply_text(
         "⏳ Processing...",
-        reply_markup=processing_btn(uid)
+        reply_markup=process_btn(uid)
     )
-
-    user_data[uid]["msg"] = msg
 
     start = time.time()
 
-    try:
-        file_path = await file_msg.download(
-            progress=progress,
-            progress_args=(msg, start, "📥 Downloading")
-        )
-    except:
-        await msg.edit_text("❌ Cancelled")
-        return
+    file_path = await file_msg.download(
+        progress=progress,
+        progress_args=(msg, start, "📥 Downloading")
+    )
 
     if cancel_flag.get(uid):
         await msg.edit_text("❌ Cancelled")
         return
 
-    # ---------------- RENAME ----------------
-    if mode == "rename":
+    # ---------------- CLEAN RENAME ----------------
+    if mode in ["rename", "instant"]:
         if not message.text:
             await message.reply_text("❌ Send valid name")
             return
 
-        new_name = message.text.strip()
+        name = message.text.strip()
         ext = file_path.split(".")[-1]
-        new_path = os.path.join(os.path.dirname(file_path), f"{new_name}.{ext}")
+        new_path = os.path.join(os.path.dirname(file_path), f"{name}.{ext}")
 
     elif mode == "file_to_video":
         new_path = file_path + ".mp4"
@@ -237,7 +214,6 @@ async def process_file(client, message):
     os.rename(file_path, new_path)
 
     thumb = get_thumb()
-    start = time.time()
 
     if mode == "file_to_video":
         await message.reply_video(new_path, thumb=thumb)
@@ -260,33 +236,12 @@ async def process_file(client, message):
     del user_data[uid]
 
 
-# ---------------- TEXT ----------------
+# ---------------- TEXT HANDLER ----------------
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def text_handler(client, message):
     uid = message.from_user.id
 
     if uid not in user_data:
-        return
-
-    mode = user_data[uid].get("mode")
-
-    if mode == "instant":
-        file_msg = user_data[uid]["file_msg"]
-
-        msg = await message.reply_text(
-            "⚡ Instant processing...",
-            reply_markup=processing_btn(uid)
-        )
-
-        file_path = await file_msg.download()
-
-        caption = f"{os.path.basename(file_path)}\n{message.text}"
-
-        await message.reply_document(file_path, caption=caption)
-
-        os.remove(file_path)
-        del user_data[uid]
-        await msg.delete()
         return
 
     await process_file(client, message)
