@@ -1,5 +1,11 @@
-import os
 import subprocess
+import os
+
+def get_ffmpeg():
+    for file in os.listdir():
+        if file.startswith("ffmpeg") and os.path.isdir(file):
+            return f"./{file}/ffmpeg"
+    return "ffmpeg"
 
 def generate_thumbnail(video_path):
     thumb_path = video_path + ".jpg"
