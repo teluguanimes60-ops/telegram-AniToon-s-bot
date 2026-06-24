@@ -99,37 +99,28 @@ async def buttons(client, query):
 
     # --- FORMAT SELECT ---
     if data in ["mp4", "mkv", "mp3"]:
-        if user_id not in user_data:
-            return
+    if user_id not in user_data:
+        return
 
-        file_msg = user_data[user_id]["file_msg"]
-        new_name = user_data[user_id]["new_name"]
+    file_msg = user_data[user_id]["file_msg"]
+    new_name = user_data[user_id]["new_name"]
 
-        await query.message.edit_text("⏳ Processing...")
+    await query.message.edit_text("⏳ Processing...")
 
-        start = time.time()
+    file_path = await file_msg.download()
 
-file_path = await file_msg.download(
-    progress=progress,
-    progress_args=(query.message, start, "⬇️ Downloading...")
-)
-        new_file = f"{new_name}.{data}"
-        new_path = os.path.join(os.path.dirname(file_path), new_file)
+    import os
+    new_file = f"{new_name}.{data}"
+    new_path = os.path.join(os.path.dirname(file_path), new_file)
 
-        os.rename(file_path, new_path)
+    os.rename(file_path, new_path)
 
-        start = time.time()
+    await query.message.reply_document(new_path)
 
-await query.message.reply_document(
-    new_path,
-    progress=progress,
-    progress_args=(query.message, start, "⬆️ Uploading...")
-)
+    os.remove(new_path)
+    del user_data[user_id]
 
-        os.remove(new_path)
-        del user_data[user_id]
-
-        await query.message.reply_text("✅ Done!")
+    await query.message.reply_text("✅ Done!")
 
     # --- MENU BUTTONS ---
     elif data == "rename":
