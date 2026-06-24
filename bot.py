@@ -2,7 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import BOT_TOKEN, API_ID, API_HASH
 from flask import Flask
-import os, time, threading
+import os, time, threading, re
 
 from thumbnail import save_thumb, get_thumb
 from help_text import HELP_TEXT
@@ -12,7 +12,22 @@ user_data = {}
 
 CHANNEL = "https://t.me/Anitoon_edit/33"
 
+# ---------------- CANCEL ----------------
 cancel_flag = {}
+
+
+# ---------------- CLEAN NAME ----------------
+def clean_name(name: str):
+    name = re.sub(r"\[.*?\]|\(.*?\)", "", name)
+    name = re.sub(
+        r"\b(720p|1080p|480p|BluRay|HDRip|WEB-DL|x264|x265|AAC|H264|H265)\b",
+        "",
+        name,
+        flags=re.IGNORECASE
+    )
+    name = re.sub(r"\s+", " ", name)
+    return name.strip(" -_.")
+
 
 # ---------------- PROGRESS ----------------
 async def progress(current, total, message, start, text):
@@ -25,7 +40,7 @@ async def progress(current, total, message, start, text):
     if diff < 0.5:
         return
 
-    percent = current * 100 / total
+    percent = current * 100 / total if total else 0
     speed = current / diff if diff else 0
     eta = (total - current) / speed if speed else 0
 
@@ -35,7 +50,10 @@ async def progress(current, total, message, start, text):
 
     try:
         await message.edit_text(
-            f"{text}\n\n[{bar}] {percent:.1f}%\n⏳ {mins}m {secs}s\n\n🔗 {CHANNEL}"
+            f"{text}\n\n"
+            f"[{bar}] {percent:.1f}%\n"
+            f"⏳ {mins}m {secs}s\n\n"
+            f"🔗 {CHANNEL}"
         )
     except:
         pass
@@ -126,7 +144,7 @@ async def cb(client, query):
 
     elif data == "instant":
         user_data[uid] = {"mode": "instant"}
-        await query.message.edit_text("⚡ Send file (fast rename mode)", reply_markup=back_btn())
+        await query.message.edit_text("⚡ Send file then text (clean rename)", reply_markup=back_btn())
 
     elif data == "convert":
         await query.message.edit_text("🔄 Choose convert type:", reply_markup=convert_menu())
@@ -155,9 +173,9 @@ async def file_handler(client, message):
     }
 
     if mode == "rename":
-        await message.reply_text("✏️ Send file name (without extension)")
+        await message.reply_text("✏️ Send file name (no extension)")
     elif mode == "instant":
-        await message.reply_text("⚡ Send file name (fast rename)")
+        await message.reply_text("⚡ Send file name (clean rename)")
     else:
         await process_file(client, message)
 
@@ -183,24 +201,28 @@ async def process_file(client, message):
 
     start = time.time()
 
-    file_path = await file_msg.download(
-        progress=progress,
-        progress_args=(msg, start, "📥 Downloading")
-    )
+    try:
+        file_path = await file_msg.download(
+            progress=progress,
+            progress_args=(msg, start, "📥 Downloading")
+        )
+    except:
+        await msg.edit_text("❌ Cancelled")
+        return
 
     if cancel_flag.get(uid):
         await msg.edit_text("❌ Cancelled")
         return
 
-    # ---------------- CLEAN RENAME ----------------
+    # ---------------- NORMAL RENAME ----------------
     if mode in ["rename", "instant"]:
         if not message.text:
             await message.reply_text("❌ Send valid name")
             return
 
-        name = message.text.strip()
+        clean = clean_name(message.text)
         ext = file_path.split(".")[-1]
-        new_path = os.path.join(os.path.dirname(file_path), f"{name}.{ext}")
+        new_path = os.path.join(os.path.dirname(file_path), f"{clean}.{ext}")
 
     elif mode == "file_to_video":
         new_path = file_path + ".mp4"
