@@ -13,7 +13,7 @@ user_data = {}
 # ---------------- PROGRESS ----------------
 async def progress(current, total, message, start, text):
     diff = time.time() - start
-    if diff == 0:
+    if diff < 1:
         return
 
     percent = current * 100 / total
@@ -32,8 +32,10 @@ async def progress(current, total, message, start, text):
     except:
         pass
 
+
 # ---------------- BOT ----------------
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+
 
 # ---------------- KEEP ALIVE ----------------
 @flask_app.route("/")
@@ -45,6 +47,7 @@ def run():
 
 threading.Thread(target=run, daemon=True).start()
 
+
 # ---------------- BUTTONS ----------------
 def main_menu():
     return InlineKeyboardMarkup([
@@ -54,6 +57,7 @@ def main_menu():
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ])
 
+
 def convert_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📄 File → Video", callback_data="file_to_video")],
@@ -61,10 +65,12 @@ def convert_menu():
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ])
 
+
 def back_btn():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ])
+
 
 # ---------------- START ----------------
 @app.on_message(filters.command("start"))
@@ -74,20 +80,22 @@ async def start(client, message):
         reply_markup=main_menu()
     )
 
-# ---------------- CALLBACK FIXED ----------------
+
+# ---------------- CALLBACK (FIXED FULL) ----------------
 @app.on_callback_query()
 async def cb(client, query):
+    await query.answer()
     data = query.data
+    uid = query.from_user.id
 
     if data == "back":
-        await query.message.edit_text("Main Menu", reply_markup=main_menu())
+        await query.message.edit_text("🔥 Main Menu", reply_markup=main_menu())
 
-        await query.message.edit_text(
-    "ℹ️ Help Menu",
-    reply_markup=back_btn()
-    )
+    elif data == "help":
+        await query.message.edit_text(HELP_TEXT, reply_markup=back_btn())
 
     elif data == "rename":
+        user_data[uid] = {"mode": "rename"}
         await query.message.edit_text("📁 Send file to rename", reply_markup=back_btn())
 
     elif data == "thumb":
@@ -97,14 +105,15 @@ async def cb(client, query):
         await query.message.edit_text("🔄 Choose convert type:", reply_markup=convert_menu())
 
     elif data == "file_to_video":
-        user_data[query.from_user.id] = {"mode": "file_to_video"}
+        user_data[uid] = {"mode": "file_to_video"}
         await query.message.edit_text("📄 Send file to convert into video", reply_markup=back_btn())
 
     elif data == "video_to_file":
-        user_data[query.from_user.id] = {"mode": "video_to_file"}
+        user_data[uid] = {"mode": "video_to_file"}
         await query.message.edit_text("🎬 Send video to convert into file", reply_markup=back_btn())
 
-# ---------------- FILE RECEIVE ----------------
+
+# ---------------- FILE HANDLER ----------------
 @app.on_message(filters.document | filters.video | filters.audio)
 async def file_handler(client, message):
     user_id = message.from_user.id
@@ -118,14 +127,17 @@ async def file_handler(client, message):
 
     if mode == "rename":
         await message.reply_text("✏️ Send new file name")
-
     else:
         await process_file(client, message, auto=True)
 
-# ---------------- MAIN PROCESS ----------------
+
+# ---------------- PROCESS ----------------
 async def process_file(client, message, auto=False):
     user_id = message.from_user.id
-    data = user_data[user_id]
+    data = user_data.get(user_id)
+
+    if not data:
+        return
 
     file_msg = data["file_msg"]
     mode = data.get("mode", "rename")
@@ -141,7 +153,11 @@ async def process_file(client, message, auto=False):
 
     # ---------- RENAME ----------
     if mode == "rename" and not auto:
-        new_name = message.text
+        if not message.text:
+            await message.reply_text("❌ Send valid file name")
+            return
+
+        new_name = message.text.strip()
         ext = file_path.split(".")[-1]
         new_path = os.path.join(os.path.dirname(file_path), f"{new_name}.{ext}")
 
@@ -187,7 +203,8 @@ async def process_file(client, message, auto=False):
     os.remove(new_path)
     del user_data[user_id]
 
-# ---------------- RENAME INPUT ----------------
+
+# ---------------- TEXT (RENAME INPUT) ----------------
 @app.on_message(filters.text & ~filters.command(["start"]))
 async def rename_input(client, message):
     user_id = message.from_user.id
@@ -197,12 +214,14 @@ async def rename_input(client, message):
 
     await process_file(client, message)
 
+
 # ---------------- THUMB ----------------
 @app.on_message(filters.photo)
 async def thumb_handler(client, message):
     path = await message.download()
     save_thumb(path)
     await message.reply_text("✅ Thumbnail Saved")
+
 
 print("🚀 Bot Running...")
 app.run()
