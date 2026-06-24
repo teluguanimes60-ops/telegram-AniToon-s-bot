@@ -13,16 +13,33 @@ async def progress(current, total, message, start, text):
     now = time.time()
     diff = now - start
 
-    if round(diff % 5) == 0:  # update every 5 sec
-        percentage = current * 100 / total
-        bar = "█" * int(percentage // 10) + "░" * (10 - int(percentage // 10))
+    if diff == 0:
+        return
 
-        try:
-            await message.edit_text(
-                f"{text}\n\n[{bar}] {percentage:.1f}%"
-            )
-        except:
-            pass
+    percentage = current * 100 / total
+    speed = current / diff  # bytes per second
+    eta = (total - current) / speed if speed > 0 else 0
+
+    # Convert speed
+    if speed > 1024 * 1024:
+        speed_text = f"{speed / (1024*1024):.2f} MB/s"
+    else:
+        speed_text = f"{speed / 1024:.2f} KB/s"
+
+    # ETA format
+    mins, secs = divmod(int(eta), 60)
+
+    bar = "█" * int(percentage // 10) + "░" * (10 - int(percentage // 10))
+
+    try:
+        await message.edit_text(
+            f"{text}\n\n"
+            f"[{bar}] {percentage:.1f}%\n"
+            f"⚡ Speed: {speed_text}\n"
+            f"⏳ ETA: {mins}m {secs}s"
+        )
+    except:
+        pass
 # --- BOT SETUP ---
 app = Client(
     "AniToonBot",
@@ -106,9 +123,15 @@ async def buttons(client, query):
         file_msg = user_data[user_id]["file_msg"]
         new_name = user_data[user_id]["new_name"]
 
+        msg = await query.message.edit_text("Starting...")
         await query.message.edit_text("⏳ Processing...")
 
-        file_path = await file_msg.download()
+        start_time = time.time()
+
+file_path = await file_msg.download(
+    progress=progress,
+    progress_args=("📥 Downloading...", start_time)
+)
 
         new_file = f"{new_name}.{data}"
         new_path = os.path.join(os.path.dirname(file_path), new_file)
@@ -117,10 +140,14 @@ async def buttons(client, query):
 
         thumb = get_thumb()
 
-        await query.message.reply_document(
-            new_path,
-            thumb=thumb
-        )
+start_time = time.time()
+
+await query.message.reply_document(
+    new_path,
+    thumb=thumb,
+    progress=progress,
+    progress_args=("📤 Uploading...", start_time)
+)
 
         os.remove(new_path)
         del user_data[user_id]
