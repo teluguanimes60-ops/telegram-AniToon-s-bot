@@ -3,9 +3,25 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import API_ID, API_HASH, BOT_TOKEN
 import os
+import threading
 
 from thumbnail import save_thumb, get_thumb
+from flask import Flask
 
+# ---------------- FLASK (FOR RENDER FREE) ----------------
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def home():
+    return "Bot Running 🚀"
+
+def run():
+    port = int(os.environ.get("PORT", 10000))
+    flask_app.run(host="0.0.0.0", port=port)
+
+threading.Thread(target=run).start()
+
+# ---------------- BOT ----------------
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 user_data = {}
@@ -90,7 +106,6 @@ async def file_handler(client, message):
     mode = user_data[user_id]["mode"]
     user_data[user_id]["file"] = message
 
-    # delete user file message
     try:
         await message.delete()
     except:
@@ -118,13 +133,11 @@ async def text_handler(client, message):
     if not file_msg:
         return
 
-    # delete user text
     try:
         await message.delete()
     except:
         pass
 
-    # delete old bot msg
     try:
         await data["msg"].delete()
     except:
@@ -145,16 +158,13 @@ async def text_handler(client, message):
         ext = file_path.split(".")[-1]
         new_path = os.path.join(os.path.dirname(file_path), f"{new_name}.{ext}")
 
-        # rename properly (overwrite name)
         os.rename(file_path, new_path)
 
         thumb = get_thumb()
 
-        # AUTO THUMB if not set
         if not thumb and file_msg.video:
             thumb = generate_thumbnail(new_path)
 
-        # SEND BASED ON TYPE
         if file_msg.video:
             await client.send_video(message.chat.id, new_path, thumb=thumb)
         elif file_msg.audio:
@@ -170,7 +180,6 @@ async def text_handler(client, message):
             except:
                 pass
 
-        # delete file
         try:
             os.remove(new_path)
         except:
