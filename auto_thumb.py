@@ -1,6 +1,6 @@
 import os
 import subprocess
-
+FFMPEG = "ffmpeg"  # works if available
 def generate_thumbnail(video_path):
     thumb_path = video_path + ".jpg"
 
