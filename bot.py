@@ -115,17 +115,17 @@ if data in ["mp4", "mkv", "mp3"]:
 
     os.rename(file_path, new_path)
 
-    thumb = get_thumb()
+        thumb = get_thumb()
 
-    await query.message.reply_document(
-        new_path,
-        thumb=thumb
-    )
+        await query.message.reply_document(
+            new_path,
+            thumb=thumb
+        )
 
-    os.remove(new_path)
-    del user_data[user_id]
+        os.remove(new_path)
+        del user_data[user_id]
 
-    await query.message.reply_text("✅ Done!")
+        await query.message.reply_text("✅ Done!")
 
     # --- MENU BUTTONS ---
     elif data == "rename":
@@ -138,6 +138,7 @@ if data in ["mp4", "mkv", "mp3"]:
         await query.message.edit_text("Main menu")
 
 # --- FILE HANDLER ---
+# THUMBNAIL SET
 @app.on_message(filters.photo)
 async def set_thumbnail(client, message):
     file_path = await message.download()
@@ -145,6 +146,7 @@ async def set_thumbnail(client, message):
 
     await message.reply_text("✅ Thumbnail saved!")
 
+# FILE RECEIVE
 @app.on_message(filters.document | filters.video | filters.audio)
 async def get_file(client, message):
     user_id = message.from_user.id
@@ -154,7 +156,7 @@ async def get_file(client, message):
     }
 
     await message.reply_text(
-        "📁 File received!\n\nSend new file name to add.\n"
+        "📁 File received!\n\nSend new file name (without extension)\nExample: movie"
     )
     
 async def get_file(client, message):
