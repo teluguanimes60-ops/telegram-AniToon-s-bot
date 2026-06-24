@@ -2,6 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import BOT_TOKEN, API_ID, API_HASH
 from flask import Flask
+flask_app = Flask(__name__)
 user_data = {}
 import threading
 
