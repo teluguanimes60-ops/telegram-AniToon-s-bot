@@ -14,13 +14,11 @@ app = Client(
 )
 
 # --- FLASK (KEEP ALIVE) ---
-flask_app = Flask(__name__)
-
 @flask_app.route("/")
 def home():
     return "Bot is Running 🚀"
-    
-    @flask_app.route("/ping")
+
+@flask_app.route("/ping")
 def ping():
     return "Alive 🔥"
 
