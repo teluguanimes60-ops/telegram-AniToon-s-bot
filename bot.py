@@ -1,64 +1,35 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import BOT_TOKEN, API_ID, API_HASH
-from flask import Flask
-import os, time, threading
+from config import API_ID, API_HASH, BOT_TOKEN
+import os, time
 
 from thumbnail import save_thumb, get_thumb
-from help_text import HELP_TEXT
 
-flask_app = Flask(__name__)
-user_data = {}
-
-# ---------------- PROGRESS ----------------
-async def progress(current, total, message, start, text):
-    diff = time.time() - start
-    if diff == 0:
-        return
-
-    percent = current * 100 / total
-    speed = current / diff
-    eta = (total - current) / speed if speed > 0 else 0
-
-    speed_text = f"{speed/1024/1024:.2f} MB/s" if speed > 1024*1024 else f"{speed/1024:.2f} KB/s"
-    mins, secs = divmod(int(eta), 60)
-
-    bar = "█" * int(percent // 10) + "░" * (10 - int(percent // 10))
-
-    try:
-        await message.edit_text(
-            f"{text}\n\n[{bar}] {percent:.1f}%\n⚡ {speed_text}\n⏳ {mins}m {secs}s\n\n🔗 https://t.me/Anitoon_edit/33"
-        )
-    except:
-        pass
-
-# ---------------- BOT ----------------
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# ---------------- KEEP ALIVE ----------------
-@flask_app.route("/")
-def home():
-    return "Bot Running"
-
-def run():
-    flask_app.run(host="0.0.0.0", port=10000)
-
-threading.Thread(target=run, daemon=True).start()
+user_data = {}
 
 # ---------------- BUTTONS ----------------
 def main_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
-        [InlineKeyboardButton("🔄 Convert", callback_data="convert")],
+        [InlineKeyboardButton("📁 Rename", callback_data="rename")],
+        [InlineKeyboardButton("✏️ Edit Caption", callback_data="edit")],
         [InlineKeyboardButton("🖼 Thumbnail", callback_data="thumb")],
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ])
 
-def convert_menu():
+def process_buttons():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📄 File → Video", callback_data="file_to_video")],
-        [InlineKeyboardButton("🎬 Video → File", callback_data="video_to_file")],
-        [InlineKeyboardButton("🔙 Back", callback_data="back")]
+        [
+            InlineKeyboardButton("⏸ Pause", callback_data="pause"),
+            InlineKeyboardButton("▶️ Resume", callback_data="resume")
+        ],
+        [
+            InlineKeyboardButton("❌ Cancel", callback_data="cancel")
+        ],
+        [
+            InlineKeyboardButton("📢 Channel", url="https://t.me/Anitoon_edit")
+        ]
     ])
 
 def back_btn():
@@ -69,141 +40,146 @@ def back_btn():
 # ---------------- START ----------------
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    await message.reply_text(
-        "🔥 **AniToon Bot**\n\nSelect option:",
-        reply_markup=main_menu()
-    )
+    await message.reply_text("🔥 AniToon Bot", reply_markup=main_menu())
 
-# ---------------- CALLBACK FIXED ----------------
+# ---------------- CALLBACK ----------------
 @app.on_callback_query()
 async def cb(client, query):
     data = query.data
+    user_id = query.from_user.id
 
     if data == "back":
         await query.message.edit_text("Main Menu", reply_markup=main_menu())
 
-    elif data == "help":
-        await query.message.edit_text(
-            HELP_TEXT + "\n\nPowered By: @AniToon_Edit",
-            reply_markup=back_btn()
-        )
-
     elif data == "rename":
-        await query.message.edit_text("📁 Send file to rename", reply_markup=back_btn())
+        user_data[user_id] = {"mode": "rename"}
+        await query.message.edit_text("📁 Send file", reply_markup=back_btn())
+
+    elif data == "edit":
+        user_data[user_id] = {"mode": "edit"}
+        await query.message.edit_text("✏️ Send file to edit caption", reply_markup=back_btn())
 
     elif data == "thumb":
-        await query.message.edit_text("🖼 Send photo to set thumbnail", reply_markup=back_btn())
+        user_data[user_id] = {"mode": "thumb"}
+        await query.message.edit_text("🖼 Send photo", reply_markup=back_btn())
 
-    elif data == "convert":
-        await query.message.edit_text("🔄 Choose convert type:", reply_markup=convert_menu())
+    elif data == "help":
+        await query.message.edit_text("Send file → rename / edit caption / thumbnail", reply_markup=back_btn())
 
-    elif data == "file_to_video":
-        user_data[query.from_user.id] = {"mode": "file_to_video"}
-        await query.message.edit_text("📄 Send file to convert into video", reply_markup=back_btn())
+    elif data == "pause":
+        user_data[user_id]["pause"] = True
 
-    elif data == "video_to_file":
-        user_data[query.from_user.id] = {"mode": "video_to_file"}
-        await query.message.edit_text("🎬 Send video to convert into file", reply_markup=back_btn())
+    elif data == "resume":
+        user_data[user_id]["pause"] = False
+
+    elif data == "cancel":
+        user_data[user_id]["cancel"] = True
 
 # ---------------- FILE RECEIVE ----------------
 @app.on_message(filters.document | filters.video | filters.audio)
 async def file_handler(client, message):
     user_id = message.from_user.id
 
-    mode = user_data.get(user_id, {}).get("mode", "rename")
-
-    user_data[user_id] = {
-        "file_msg": message,
-        "mode": mode
-    }
-
-    if mode == "rename":
-        await message.reply_text("✏️ Send new file name")
-
-    else:
-        await process_file(client, message, auto=True)
-
-# ---------------- MAIN PROCESS ----------------
-async def process_file(client, message, auto=False):
-    user_id = message.from_user.id
-    data = user_data[user_id]
-
-    file_msg = data["file_msg"]
-    mode = data.get("mode", "rename")
-
-    msg = await message.reply_text("⏳ Processing...")
-
-    start_time = time.time()
-
-    file_path = await file_msg.download(
-        progress=progress,
-        progress_args=(msg, start_time, "📥 Downloading")
-    )
-
-    # ---------- RENAME ----------
-    if mode == "rename" and not auto:
-        new_name = message.text
-        ext = file_path.split(".")[-1]
-        new_path = os.path.join(os.path.dirname(file_path), f"{new_name}.{ext}")
-
-    # ---------- CONVERT ----------
-    elif mode == "file_to_video":
-        new_path = file_path + ".mp4"
-
-    elif mode == "video_to_file":
-        new_path = file_path + ".bin"
-
-    else:
+    if user_id not in user_data:
         return
 
-    os.rename(file_path, new_path)
+    mode = user_data[user_id]["mode"]
+    user_data[user_id]["file"] = message
 
-    thumb = get_thumb()
-    start_time = time.time()
+    # delete old message (clean UI)
+    try:
+        await message.delete()
+    except:
+        pass
 
-    # ---------- SEND ----------
-    if mode == "file_to_video":
-        await message.reply_video(
-            new_path,
-            thumb=thumb,
-            progress=progress,
-            progress_args=(msg, start_time, "📤 Uploading")
-        )
+    if mode == "rename":
+        msg = await message.reply_text("✏️ Send new file name")
+        user_data[user_id]["msg"] = msg
 
-    elif mode == "video_to_file":
-        await message.reply_document(
-            new_path,
-            progress=progress,
-            progress_args=(msg, start_time, "📤 Uploading")
-        )
+    elif mode == "edit":
+        msg = await message.reply_text("✏️ Send new caption")
+        user_data[user_id]["msg"] = msg
 
-    else:
-        if file_msg.video:
-            await message.reply_video(new_path, thumb=thumb)
-        elif file_msg.audio:
-            await message.reply_audio(new_path)
-        else:
-            await message.reply_document(new_path, thumb=thumb)
-
-    os.remove(new_path)
-    del user_data[user_id]
-
-# ---------------- RENAME INPUT ----------------
-@app.on_message(filters.text & ~filters.command(["start"]))
-async def rename_input(client, message):
+# ---------------- TEXT HANDLER ----------------
+@app.on_message(filters.text)
+async def text_handler(client, message):
     user_id = message.from_user.id
 
     if user_id not in user_data:
         return
 
-    await process_file(client, message)
+    data = user_data[user_id]
+    file_msg = data.get("file")
+
+    if not file_msg:
+        return
+
+    # delete user text (clean chat)
+    try:
+        await message.delete()
+    except:
+        pass
+
+    # delete previous bot msg
+    try:
+        await data["msg"].delete()
+    except:
+        pass
+
+    # ---------------- RENAME ----------------
+    if data["mode"] == "rename":
+        new_name = message.text
+
+        status = await client.send_message(
+            message.chat.id,
+            "⏳ Processing...",
+            reply_markup=process_buttons()
+        )
+
+        file_path = await file_msg.download()
+
+        ext = file_path.split(".")[-1]
+        new_path = os.path.join(os.path.dirname(file_path), f"{new_name}.{ext}")
+
+        os.rename(file_path, new_path)
+
+        thumb = get_thumb()
+
+        # AUTO THUMB if not set
+        if not thumb and file_msg.video:
+            thumb = None
+
+        await client.send_document(
+            message.chat.id,
+            new_path,
+            thumb=thumb
+        )
+
+        os.remove(new_path)
+
+        await status.delete()
+
+    # ---------------- EDIT CAPTION ----------------
+    elif data["mode"] == "edit":
+        await file_msg.copy(
+            chat_id=message.chat.id,
+            caption=message.text
+        )
+
+    user_data.pop(user_id)
 
 # ---------------- THUMB ----------------
 @app.on_message(filters.photo)
 async def thumb_handler(client, message):
     path = await message.download()
     save_thumb(path)
-    await message.reply_text("✅ Thumbnail Saved")
+
+    try:
+        await message.delete()
+    except:
+        pass
+
+    await client.send_message(message.chat.id, "✅ Thumbnail Saved")
 
 print("🚀 Bot Running...")
 app.run()
