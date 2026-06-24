@@ -5,7 +5,22 @@ from flask import Flask
 flask_app = Flask(__name__)
 user_data = {}
 import threading
+import time
 
+async def progress(current, total, message, start, text):
+    now = time.time()
+    diff = now - start
+
+    if round(diff % 5) == 0:  # update every 5 sec
+        percentage = current * 100 / total
+        bar = "█" * int(percentage // 10) + "░" * (10 - int(percentage // 10))
+
+        try:
+            await message.edit_text(
+                f"{text}\n\n[{bar}] {percentage:.1f}%"
+            )
+        except:
+            pass
 # --- BOT SETUP ---
 app = Client(
     "AniToonBot",
@@ -91,7 +106,12 @@ async def buttons(client, query):
 
         await query.message.edit_text("⏳ Processing...")
 
-        file_path = await file_msg.download()
+        start = time.time()
+
+file_path = await file_msg.download(
+    progress=progress,
+    progress_args=(query.message, start, "⬇️ Downloading...")
+)
 
         import os
         new_file = f"{new_name}.{data}"
@@ -99,7 +119,13 @@ async def buttons(client, query):
 
         os.rename(file_path, new_path)
 
-        await query.message.reply_document(new_path)
+        start = time.time()
+
+await query.message.reply_document(
+    new_path,
+    progress=progress,
+    progress_args=(query.message, start, "⬆️ Uploading...")
+)
 
         os.remove(new_path)
         del user_data[user_id]
