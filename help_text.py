@@ -1,19 +1,16 @@
 HELP_TEXT = """
-📌 How to use:
+🤖 AniToon Bot Help
 
-1. Click Rename
-2. Send file
-3. Send new name
-4. Done ✅
+📁 Rename:
+Send file → send new name → done
+
+🔁 Convert:
+File → Video OR Video → File
 
 🖼 Thumbnail:
 Send photo to set thumbnail
 
-⚡ Features:
-- Fast rename
-- Progress bar
-- Speed + ETA
-- Auto file type
+⚡ Fast & simple bot
 
-Powerded By: @AniToon_Edit
+Powered By: @AniToon_Edit
 """
