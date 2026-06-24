@@ -2,7 +2,7 @@ from auto_thumb import generate_thumbnail
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import API_ID, API_HASH, BOT_TOKEN
-import os, time
+import os
 
 from thumbnail import save_thumb, get_thumb
 
@@ -66,7 +66,7 @@ async def cb(client, query):
 
     elif data == "help":
         await query.message.edit_text(
-            "Send file → rename / edit caption / thumbnail\n\nPowered By: @AniToon_Edit",
+            "📌 Send file → choose option → done",
             reply_markup=back_btn()
         )
 
@@ -90,17 +90,18 @@ async def file_handler(client, message):
     mode = user_data[user_id]["mode"]
     user_data[user_id]["file"] = message
 
+    # delete user file message
     try:
         await message.delete()
     except:
         pass
 
     if mode == "rename":
-        msg = await message.reply_text("✏️ Send new file name")
+        msg = await client.send_message(message.chat.id, "✏️ Send new file name")
         user_data[user_id]["msg"] = msg
 
     elif mode == "edit":
-        msg = await message.reply_text("✏️ Send new caption")
+        msg = await client.send_message(message.chat.id, "✏️ Send new caption")
         user_data[user_id]["msg"] = msg
 
 # ---------------- TEXT HANDLER ----------------
@@ -117,12 +118,13 @@ async def text_handler(client, message):
     if not file_msg:
         return
 
-    # clean UI
+    # delete user text
     try:
         await message.delete()
     except:
         pass
 
+    # delete old bot msg
     try:
         await data["msg"].delete()
     except:
@@ -130,7 +132,7 @@ async def text_handler(client, message):
 
     # ---------------- RENAME ----------------
     if data["mode"] == "rename":
-        new_name = message.text
+        new_name = message.text.strip()
 
         status = await client.send_message(
             message.chat.id,
@@ -143,21 +145,24 @@ async def text_handler(client, message):
         ext = file_path.split(".")[-1]
         new_path = os.path.join(os.path.dirname(file_path), f"{new_name}.{ext}")
 
+        # rename properly (overwrite name)
         os.rename(file_path, new_path)
 
         thumb = get_thumb()
 
-        # AUTO THUMBNAIL (if user didn't set)
+        # AUTO THUMB if not set
         if not thumb and file_msg.video:
             thumb = generate_thumbnail(new_path)
 
-        await client.send_document(
-            message.chat.id,
-            new_path,
-            thumb=thumb
-        )
+        # SEND BASED ON TYPE
+        if file_msg.video:
+            await client.send_video(message.chat.id, new_path, thumb=thumb)
+        elif file_msg.audio:
+            await client.send_audio(message.chat.id, new_path)
+        else:
+            await client.send_document(message.chat.id, new_path, thumb=thumb)
 
-        # DELETE AUTO GENERATED THUMB
+        # delete auto thumb
         if thumb and isinstance(thumb, str):
             try:
                 if os.path.exists(thumb) and "thumb" not in thumb:
@@ -165,7 +170,7 @@ async def text_handler(client, message):
             except:
                 pass
 
-        # DELETE FILE
+        # delete file
         try:
             os.remove(new_path)
         except:
