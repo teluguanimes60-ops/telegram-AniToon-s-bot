@@ -7,6 +7,7 @@ user_data = {}
 import os
 import time
 import threading
+from thumbnail import save_thumb, get_thumb
 
 async def progress(current, total, message, start, text):
     now = time.time()
@@ -115,7 +116,12 @@ async def buttons(client, query):
 
         os.rename(file_path, new_path)
 
-        await query.message.reply_document(new_path)
+thumb = get_thumb()
+
+await query.message.reply_document(
+    new_path,
+    thumb=thumb
+)
 
         os.remove(new_path)
         del user_data[user_id]
@@ -134,6 +140,13 @@ async def buttons(client, query):
 
 # --- FILE HANDLER ---
 @app.on_message(filters.document | filters.video | filters.audio)
+@app.on_message(filters.photo)
+async def set_thumbnail(client, message):
+    file_path = await message.download()
+    save_thumb(file_path)
+
+    await message.reply_text("✅ Thumbnail saved!")
+    
 async def get_file(client, message):
     user_id = message.from_user.id
 
