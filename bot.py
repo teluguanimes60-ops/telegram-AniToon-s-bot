@@ -278,4 +278,7 @@ async def thumb_handler(client, message):
 
 
 print("🚀 Bot Running...")
-app.run()
+import asyncio
+
+if __name__ == "__main__":
+    app.run()
