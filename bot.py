@@ -10,7 +10,7 @@ from help_text import HELP_TEXT
 flask_app = Flask(__name__)
 user_data = {}
 
-# ---------- PROGRESS ----------
+# ---------------- PROGRESS ----------------
 async def progress(current, total, message, start, text):
     diff = time.time() - start
     if diff == 0:
@@ -32,24 +32,24 @@ async def progress(current, total, message, start, text):
     except:
         pass
 
-# ---------- BOT ----------
+# ---------------- BOT ----------------
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# ---------- KEEP ALIVE ----------
+# ---------------- KEEP ALIVE ----------------
 @flask_app.route("/")
 def home():
-    return "Alive"
+    return "Bot Running"
 
 def run():
     flask_app.run(host="0.0.0.0", port=10000)
 
 threading.Thread(target=run, daemon=True).start()
 
-# ---------- BUTTONS ----------
+# ---------------- BUTTONS ----------------
 def main_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📁 Rename", callback_data="rename")],
-        [InlineKeyboardButton("🖼 Thumbnail", callback_data="thumb")],
+        [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
+        [InlineKeyboardButton("🖼 Set Thumbnail", callback_data="thumb")],
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ])
 
@@ -58,21 +58,19 @@ def back_btn():
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ])
 
-# ---------- START ----------
+# ---------------- START ----------------
 @app.on_message(filters.command("start"))
 async def start(client, message):
     await message.reply_text(
-        "🔥 **AniToon Bot**\n\nChoose option:",
+        "🔥 **AniToon Bot**\n\nChoose an option:",
         reply_markup=main_menu()
     )
 
-# ---------- BUTTONS ----------
+# ---------------- CALLBACK ----------------
 @app.on_callback_query()
 async def cb(client, query):
     data = query.data
-    user_id = query.from_user.id
 
-    # --- MENU ---
     if data == "back":
         await query.message.edit_text("Main Menu", reply_markup=main_menu())
 
@@ -85,76 +83,82 @@ async def cb(client, query):
     elif data == "thumb":
         await query.message.edit_text("🖼 Send photo to set thumbnail", reply_markup=back_btn())
 
-    # --- FORMAT ---
-    elif data in ["mp4", "mkv", "mp3"]:
-        if user_id not in user_data:
-            return
+# ---------------- FILE RECEIVE ----------------
+@app.on_message(filters.document | filters.video | filters.audio)
+async def file_handler(client, message):
+    user_id = message.from_user.id
 
-        file_msg = user_data[user_id]["file_msg"]
-        new_name = user_data[user_id]["new_name"]
+    user_data[user_id] = {
+        "file_msg": message
+    }
 
-        msg = await query.message.edit_text("Starting...")
+    await message.reply_text("📁 Send new file name (without extension)")
 
-        start_time = time.time()
+# ---------------- RENAME LOGIC ----------------
+@app.on_message(filters.text & ~filters.command(["start"]))
+async def rename_file(client, message):
+    user_id = message.from_user.id
 
-        file_path = await file_msg.download(
-            progress=progress,
-            progress_args=(msg, start_time, "📥 Downloading")
-        )
+    if user_id not in user_data:
+        return
 
-        new_path = f"{file_path}.{data}"
-        os.rename(file_path, new_path)
+    file_msg = user_data[user_id]["file_msg"]
+    new_name = message.text
 
-        thumb = get_thumb()
+    msg = await message.reply_text("⏳ Processing...")
 
-        start_time = time.time()
+    start_time = time.time()
 
-        await query.message.reply_document(
+    # DOWNLOAD
+    file_path = await file_msg.download(
+        progress=progress,
+        progress_args=(msg, start_time, "📥 Downloading")
+    )
+
+    # KEEP ORIGINAL EXTENSION
+    ext = file_path.split(".")[-1]
+    new_path = f"{os.path.splitext(file_path)[0]}_{new_name}.{ext}"
+
+    os.rename(file_path, new_path)
+
+    thumb = get_thumb()
+    start_time = time.time()
+
+    # AUTO SEND TYPE
+    if file_msg.video:
+        await message.reply_video(
             new_path,
             thumb=thumb,
             progress=progress,
             progress_args=(msg, start_time, "📤 Uploading")
         )
 
-        os.remove(new_path)
-        del user_data[user_id]
+    elif file_msg.audio:
+        await message.reply_audio(
+            new_path,
+            progress=progress,
+            progress_args=(msg, start_time, "📤 Uploading")
+        )
 
-        await query.message.reply_text("✅ Done!", reply_markup=main_menu())
+    else:
+        await message.reply_document(
+            new_path,
+            thumb=thumb,
+            progress=progress,
+            progress_args=(msg, start_time, "📤 Uploading")
+        )
 
-# ---------- GET NAME ----------
-@app.on_message(filters.text & ~filters.command(["start"]))
-async def get_name(client, message):
-    user_id = message.from_user.id
+    os.remove(new_path)
+    del user_data[user_id]
 
-    if user_id not in user_data:
-        return
+    await message.reply_text("✅ Done!", reply_markup=main_menu())
 
-    user_data[user_id]["new_name"] = message.text
-
-    btn = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("MP4 🎬", callback_data="mp4"),
-            InlineKeyboardButton("MKV 🎥", callback_data="mkv")
-        ],
-        [InlineKeyboardButton("MP3 🎵", callback_data="mp3")]
-    ])
-
-    await message.reply_text("🎯 Choose format:", reply_markup=btn)
-
-# ---------- FILE ----------
-@app.on_message(filters.document | filters.video | filters.audio)
-async def file_handler(client, message):
-    user_id = message.from_user.id
-    user_data[user_id] = {"file_msg": message}
-
-    await message.reply_text("📁 Send new name")
-
-# ---------- THUMB ----------
+# ---------------- THUMBNAIL ----------------
 @app.on_message(filters.photo)
 async def thumb_handler(client, message):
     path = await message.download()
     save_thumb(path)
     await message.reply_text("✅ Thumbnail Saved")
 
-print("🚀 Bot Running")
+print("🚀 Bot Running...")
 app.run()
