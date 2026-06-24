@@ -8,8 +8,15 @@ from thumbnail import save_thumb, get_thumb
 from help_text import HELP_TEXT
 
 flask_app = Flask(__name__)
-user_data = {}
 
+@flask_app.route("/")
+def home():
+    return "Bot Running"
+
+def run():
+    flask_app.run(host="0.0.0.0", port=10000)
+
+threading.Thread(target=run, daemon=True).start()
 CHANNEL = "https://t.me/Anitoon_edit/33"
 
 # ---------------- CANCEL ----------------
@@ -276,9 +283,9 @@ async def thumb_handler(client, message):
     save_thumb(path)
     await message.reply_text("✅ Thumbnail Saved")
 
-
-print("🚀 Bot Running...")
-import asyncio
-
 if __name__ == "__main__":
-    app.run()
+    print("🚀 Bot Starting...")
+    try:
+        app.run()
+    except Exception as e:
+        print("Bot crashed:", e)
