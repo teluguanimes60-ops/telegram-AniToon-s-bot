@@ -98,35 +98,34 @@ async def buttons(client, query):
     data = query.data
     user_id = query.from_user.id
 
-    # --- FORMAT SELECT ---
-    if data in ["mp4", "mkv", "mp3"]:
-        if user_id not in user_data:
-            return
+# --- FORMAT SELECT ---
+if data in ["mp4", "mkv", "mp3"]:
+    if user_id not in user_data:
+        return
 
-        file_msg = user_data[user_id]["file_msg"]
-        new_name = user_data[user_id]["new_name"]
+    file_msg = user_data[user_id]["file_msg"]
+    new_name = user_data[user_id]["new_name"]
 
-        await query.message.edit_text("⏳ Processing...")
+    await query.message.edit_text("⏳ Processing...")
 
-        file_path = await file_msg.download()
+    file_path = await file_msg.download()
 
-        import os
-        new_file = f"{new_name}.{data}"
-        new_path = os.path.join(os.path.dirname(file_path), new_file)
+    new_file = f"{new_name}.{data}"
+    new_path = os.path.join(os.path.dirname(file_path), new_file)
 
-        os.rename(file_path, new_path)
+    os.rename(file_path, new_path)
 
-thumb = get_thumb()
+    thumb = get_thumb()
 
-await query.message.reply_document(
-    new_path,
-    thumb=thumb
-)
+    await query.message.reply_document(
+        new_path,
+        thumb=thumb
+    )
 
-        os.remove(new_path)
-        del user_data[user_id]
+    os.remove(new_path)
+    del user_data[user_id]
 
-        await query.message.reply_text("✅ Done!")
+    await query.message.reply_text("✅ Done!")
 
     # --- MENU BUTTONS ---
     elif data == "rename":
@@ -139,13 +138,24 @@ await query.message.reply_document(
         await query.message.edit_text("Main menu")
 
 # --- FILE HANDLER ---
-@app.on_message(filters.document | filters.video | filters.audio)
 @app.on_message(filters.photo)
 async def set_thumbnail(client, message):
     file_path = await message.download()
     save_thumb(file_path)
 
     await message.reply_text("✅ Thumbnail saved!")
+
+@app.on_message(filters.document | filters.video | filters.audio)
+async def get_file(client, message):
+    user_id = message.from_user.id
+
+    user_data[user_id] = {
+        "file_msg": message
+    }
+
+    await message.reply_text(
+        "📁 File received!\n\nSend new file name to add.\n"
+    )
     
 async def get_file(client, message):
     user_id = message.from_user.id
@@ -155,7 +165,7 @@ async def get_file(client, message):
     }
 
     await message.reply_text(
-        "📁 File received!\n\nSend new file name (without extension)\nExample: movie"
+        "📁 File received!\n\nSend new file name to add.\n"
     )
 
 print("🚀 Bot started...")
