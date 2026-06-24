@@ -1,3 +1,4 @@
+from instant_edit import instant_edit
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import BOT_TOKEN, API_ID, API_HASH
@@ -46,13 +47,14 @@ def run():
 threading.Thread(target=run, daemon=True).start()
 
 # ---------------- BUTTONS ----------------
-def main_menu():
+def start_buttons():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
+        [InlineKeyboardButton("⚡ Instant Edit", callback_data="instant")],
         [InlineKeyboardButton("🖼 Set Thumbnail", callback_data="thumb")],
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ])
-
+    
 def back_btn():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
@@ -71,6 +73,11 @@ async def start(client, message):
 async def cb(client, query):
     data = query.data
 
+    elif data == "instant":
+    await query.message.edit_text(
+        "⚡ Send file and reply with /instant"
+    )
+    
     if data == "back":
         await query.message.edit_text("Main Menu", reply_markup=main_menu())
 
@@ -159,6 +166,10 @@ async def thumb_handler(client, message):
     path = await message.download()
     save_thumb(path)
     await message.reply_text("✅ Thumbnail Saved")
+
+@app.on_message(filters.command("instant"))
+async def instant_cmd(client, message):
+    await instant_edit(client, message)
 
 print("🚀 Bot Running...")
 app.run()
