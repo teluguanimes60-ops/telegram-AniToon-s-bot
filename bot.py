@@ -65,16 +65,19 @@ async def cb(client, query):
         await query.message.edit_text("🖼 Send photo", reply_markup=back_btn())
 
     elif data == "help":
-        await query.message.edit_text("Send file → rename / edit caption / thumbnail", reply_markup=back_btn())
+        await query.message.edit_text(
+            "Send file → rename / edit caption / thumbnail\n\nPowered By: @AniToon_Edit",
+            reply_markup=back_btn()
+        )
 
     elif data == "pause":
-        user_data[user_id]["pause"] = True
+        user_data.setdefault(user_id, {})["pause"] = True
 
     elif data == "resume":
-        user_data[user_id]["pause"] = False
+        user_data.setdefault(user_id, {})["pause"] = False
 
     elif data == "cancel":
-        user_data[user_id]["cancel"] = True
+        user_data.setdefault(user_id, {})["cancel"] = True
 
 # ---------------- FILE RECEIVE ----------------
 @app.on_message(filters.document | filters.video | filters.audio)
@@ -87,7 +90,6 @@ async def file_handler(client, message):
     mode = user_data[user_id]["mode"]
     user_data[user_id]["file"] = message
 
-    # delete old message (clean UI)
     try:
         await message.delete()
     except:
@@ -115,13 +117,12 @@ async def text_handler(client, message):
     if not file_msg:
         return
 
-    # delete user text (clean chat)
+    # clean UI
     try:
         await message.delete()
     except:
         pass
 
-    # delete previous bot msg
     try:
         await data["msg"].delete()
     except:
@@ -146,13 +147,9 @@ async def text_handler(client, message):
 
         thumb = get_thumb()
 
-        # if user NOT set thumbnail → auto generate from video
+        # AUTO THUMBNAIL (if user didn't set)
         if not thumb and file_msg.video:
-            thumb = generate_thumbnail(new_path if 'new_path' in locals() else file_path)
-
-        # AUTO THUMB if not set
-        if not thumb and file_msg.video:
-            thumb = None
+            thumb = generate_thumbnail(new_path)
 
         await client.send_document(
             message.chat.id,
@@ -160,12 +157,19 @@ async def text_handler(client, message):
             thumb=thumb
         )
 
-        if thumb and thumb.endswith(".jpg") and "thumb.jpg" not in thumb:
-    try:
-        os.remove(thumb)
-    except:
-        pass
-        os.remove(new_path)
+        # DELETE AUTO GENERATED THUMB
+        if thumb and isinstance(thumb, str):
+            try:
+                if os.path.exists(thumb) and "thumb" not in thumb:
+                    os.remove(thumb)
+            except:
+                pass
+
+        # DELETE FILE
+        try:
+            os.remove(new_path)
+        except:
+            pass
 
         await status.delete()
 
@@ -176,7 +180,7 @@ async def text_handler(client, message):
             caption=message.text
         )
 
-    user_data.pop(user_id)
+    user_data.pop(user_id, None)
 
 # ---------------- THUMB ----------------
 @app.on_message(filters.photo)
