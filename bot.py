@@ -1,15 +1,16 @@
 import os
 import time
 import threading
-import asyncio
 
 from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from auto_thumb import generate_thumbnail, setup_ffmpeg
-setup_ffmpeg()
+from auto_thumb import generate_thumbnail, setup_ffmpeg, FFMPEG_PATH
 from thumbnail import save_thumb, get_thumb
+
+# ---------------- INIT FFMPEG (ONLY ONCE) ----------------
+setup_ffmpeg()
 
 # ---------------- SAFETY ENV CHECK ----------------
 API_ID = os.getenv("API_ID")
@@ -21,10 +22,7 @@ if not API_ID or not API_HASH or not BOT_TOKEN:
 
 API_ID = int(API_ID)
 
-# ---------------- INIT FFMPEG ----------------
-setup_ffmpeg()
-
-# ---------------- FLASK ----------------
+# ---------------- FLASK KEEP ALIVE ----------------
 web = Flask(__name__)
 
 @web.route("/")
@@ -180,12 +178,10 @@ async def process_file(msg, uid):
         progress_args=(status, start)
     )
 
-    thumb = get_thumb()
+    # ---------------- THUMB ----------------
+    thumb = generate_thumbnail(file_path)
     if not thumb:
-        try:
-            thumb = generate_thumbnail(file_path)
-        except:
-            thumb = None
+        thumb = get_thumb()
 
     # ---------------- RENAME ----------------
     if data["mode"] == "rename":
@@ -200,12 +196,12 @@ async def process_file(msg, uid):
     # ---------------- CONVERT ----------------
     elif data["mode"] == "f2v":
         new_path = file_path + ".mp4"
-        os.system(f'ffmpeg -i "{file_path}" "{new_path}"')
+        os.system(f'"{FFMPEG_PATH}" -i "{file_path}" "{new_path}"')
         file_path = new_path
 
     elif data["mode"] == "v2f":
         new_path = file_path + ".mkv"
-        os.rename(file_path, new_path)
+        os.system(f'"{FFMPEG_PATH}" -i "{file_path}" "{new_path}"')
         file_path = new_path
 
     # ---------------- SEND ----------------
