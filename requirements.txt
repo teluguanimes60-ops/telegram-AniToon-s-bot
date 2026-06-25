@@ -4,3 +4,4 @@ flask
 aiofiles
 hachoir
 pillow
+requests
