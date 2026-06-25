@@ -1,11 +1,22 @@
 import os
 
-THUMB_PATH = "thumb.jpg"
+THUMB_FILE = "saved_thumbnail.jpg"
+
 
 def save_thumb(path):
-    if os.path.exists(THUMB_PATH):
-        os.remove(THUMB_PATH)
-    os.rename(path, THUMB_PATH)
+    try:
+        if os.path.exists(THUMB_FILE):
+            os.remove(THUMB_FILE)
+
+        os.rename(path, THUMB_FILE)
+        return True
+
+    except Exception:
+        return False
+
 
 def get_thumb():
-    return THUMB_PATH if os.path.exists(THUMB_PATH) else None
+    if os.path.exists(THUMB_FILE):
+        return THUMB_FILE
+
+    return None
