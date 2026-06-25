@@ -1,7 +1,11 @@
 from auto_thumb import generate_thumbnail
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-import os, time, asyncio, threading
+import os, time, threading
+
+API_ID = int(os.environ.get("API_ID"))
+API_HASH = os.environ.get("API_HASH")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 from flask import Flask
 
 from thumbnail import save_thumb, get_thumb
@@ -127,7 +131,10 @@ async def file_handler(client, message):
     mode = user_data[user_id]["mode"]
     user_data[user_id]["file"] = message
 
+    try:
     await message.delete()
+except:
+    pass
 
     if mode in ["rename", "edit"]:
         msg = await client.send_message(message.chat.id, "Send text")
@@ -150,7 +157,10 @@ async def text_handler(client, message):
     if not file_msg:
         return
 
+    try:
     await message.delete()
+except:
+    pass
     await data["msg"].delete()
 
     if data["mode"] == "rename":
@@ -170,14 +180,14 @@ async def process_file(client, message, user_id):
 
     start = time.time()
 
-    file_path = await file_msg.download(
-        progress=progress,
-        progress_args=(status, start)
-    )
+file_path = await file_msg.download(
+    progress=progress,
+    progress_args=[status, start]
+)
 
-    thumb = get_thumb()
+thumb = get_thumb()
 
-    if not thumb:
+if not thumb and file_msg.video:
     try:
         thumb = generate_thumbnail(file_path)
     except:
@@ -194,25 +204,25 @@ async def process_file(client, message, user_id):
         file_path = new_path
 
     # ---------- CONVERT ----------
-    if data["mode"] == "f2v":
-        new_path = file_path + ".mp4"
-        os.system(f"ffmpeg -i '{file_path}' '{new_path}'")
-        file_path = new_path
+if data["mode"] == "f2v":
+    new_path = file_path + ".mp4"
+    os.system(f"ffmpeg -i '{file_path}' '{new_path}'")
+    file_path = new_path
+
+elif data["mode"] == "v2f":
     base = os.path.splitext(file_path)[0]
     new_path = base + ".mkv"
-    elif data["mode"] == "v2f":
-        
-        os.rename(file_path, new_path)
-        file_path = new_path
+    os.rename(file_path, new_path)
+    file_path = new_path
 
     # ---------- SEND ----------
-    await client.send_document(
-        message.chat.id,
-        file_path,
-        thumb=thumb,
-        progress=progress,
-        progress_args=(status, start)
-    )
+await client.send_document(
+    message.chat.id,
+    file_path,
+    thumb=thumb,
+    progress=progress,
+    progress_args=[status, start]
+)
 
     try:
         os.remove(file_path)
@@ -227,7 +237,10 @@ async def process_file(client, message, user_id):
 async def thumb_handler(client, message):
     path = await message.download()
     save_thumb(path)
+try:
     await message.delete()
+except:
+    pass
     await client.send_message(message.chat.id, "Thumbnail Saved")
 
 print("🚀 Bot Running...")
