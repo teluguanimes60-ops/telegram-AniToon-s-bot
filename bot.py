@@ -8,6 +8,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from auto_thumb import generate_thumbnail, setup_ffmpeg
+setup_ffmpeg()
 from thumbnail import save_thumb, get_thumb
 
 # ---------------- SAFETY ENV CHECK ----------------
