@@ -147,8 +147,15 @@ async def cb(_, q):
         await clean_old(uid, m)
 
     elif data == "instant":
-        user_data[uid] = {"mode": "instant"}
-        m = await q.message.reply_text("⚡ Reply to file for instant edit", reply_markup=back_btn())
+        user_data[uid] = {
+            "mode": "instant",
+            "step": "file"
+        }
+
+        m = await q.message.reply_text(
+            "⚡ Send file now\n\n✏️ After sending, I will ask rename instantly",
+            reply_markup=back_btn()
+        )
         await clean_old(uid, m)
 
     elif data == "help":
@@ -193,6 +200,18 @@ async def file_handler(_, msg):
     except:
         pass
 
+    # ---------------- INSTANT EDIT ----------------
+if state["mode"] == "instant":
+    state["file"] = msg
+
+    m = await msg.reply(
+        "✏️ Now send new name instantly (no extra steps)",
+        reply_markup=back_btn()
+    )
+
+    await clean_old(uid, m)
+    return
+    
     # ---------------- RENAME ----------------
     if state["mode"] == "rename":
         state["file"] = msg
@@ -232,6 +251,26 @@ async def text_handler(_, msg):
     except:
         pass
 
+    # ---------------- INSTANT EDIT ----------------
+if state["mode"] == "instant":
+    job_id = str(uuid.uuid4())[:8]
+
+    jobs[job_id] = {
+        "uid": uid,
+        "file": state["file"],
+        "new_name": msg.text,
+        "mode": "rename",
+        "control": "run",
+        "thumb_mode": None
+    }
+
+    m = await msg.reply("⚡ Instant editing started...", reply_markup=job_buttons(job_id))
+
+    await clean_old(uid, m)
+
+    asyncio.create_task(process_job(job_id))
+    return
+    
     # ---------------- RENAME ----------------
     if state["mode"] == "rename" and state["step"] == "name":
         state["new_name"] = msg.text
