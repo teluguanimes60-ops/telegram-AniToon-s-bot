@@ -44,7 +44,8 @@ threading.Thread(target=run_web, daemon=True).start()
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 user_data = {}
-control = {}
+jobs = {}
+message_tracker = {}
 
 # ---------------- BUTTONS ----------------
 def main_menu():
@@ -130,16 +131,19 @@ async def cb(_, q):
     elif q.data == "help":
         await q.message.edit_text(HELP_TEXT, reply_markup=main_menu())
 
-    elif q.data.startswith("pause_"):
-        control[uid] = "pause"
+    if q.data.startswith("pause_"):
+        job_id = q.data.split("_")[1]
+        jobs[job_id]["control"] = "pause"
         await q.answer("Paused ⏸")
 
     elif q.data.startswith("resume_"):
-        control[uid] = "run"
+        job_id = q.data.split("_")[1]
+        jobs[job_id]["control"] = "run"
         await q.answer("Resumed ▶️")
 
     elif q.data.startswith("cancel_"):
-        control[uid] = "cancel"
+        job_id = q.data.split("_")[1]
+        jobs[job_id]["control"] = "cancel"
         await q.message.edit_text("❌ Cancelled")
 
 # ---------------- FILE HANDLER ----------------
@@ -150,36 +154,63 @@ async def file_handler(_, msg):
     if uid not in user_data:
         return
 
-    user_data[uid]["file"] = msg
+    job_id = str(uuid.uuid4())[:8]
 
-    if user_data[uid]["mode"] == "instant":
-        await instant_edit(app, msg)
-        return
+    jobs[job_id] = {
+        "uid": uid,
+        "file": msg,
+        "mode": user_data[uid]["mode"],
+        "control": "run"
+    }
 
-    await process_file(msg, uid)
-
-# ---------------- PROCESS FILE ----------------
-async def process_file(msg, uid):
-    data = user_data[uid]
-    file_msg = data["file"]
-
-    control[uid] = "run"
-
-    status = await msg.reply("📥 Downloading...", reply_markup=process_buttons(uid))
-    start = time.time()
-
-    file_path = await file_msg.download(
-        progress=progress,
-        progress_args=(status, start)
+    status = await msg.reply(
+        f"📥 File received\n🆔 Job ID: {job_id}",
+        reply_markup=job_buttons(uid, job_id)
     )
 
-    if is_cancel(uid):
+    message_tracker[job_id] = status
+
+    await process_file(job_id)
+
+# ---------------- PROCESS FILE ----------------
+async def process_file(job_id):
+    job = jobs[job_id]
+    msg = job["file"]
+    uid = job["uid"]
+
+    status = await msg.reply("📥 Downloading...", reply_markup=job_buttons(uid, job_id))
+    start = time.time()
+
+    file_path = await msg.download()
+
+    if job["control"] == "cancel":
         await status.edit_text("❌ Cancelled")
         return
 
-    await status.edit_text("⚙️ Processing...", reply_markup=process_buttons(uid))
+    await status.edit_text("⚙️ Processing...", reply_markup=job_buttons(uid, job_id))
 
     thumb = generate_thumbnail(file_path) or get_thumb()
+
+    if job["mode"] == "convert":
+        new_path = file_path + ".mp4"
+        subprocess.run([FFMPEG_PATH, "-i", file_path, new_path])
+        file_path = new_path
+
+    if job["control"] == "cancel":
+        await status.edit_text("❌ Cancelled")
+        return
+
+    await status.edit_text("📤 Uploading...", reply_markup=job_buttons(uid, job_id))
+
+    await msg.reply_document(file_path, thumb=thumb)
+
+    try:
+        os.remove(file_path)
+    except:
+        pass
+
+    await status.delete()
+    jobs.pop(job_id, None)
 
     # ---------------- CONVERT ----------------
     if data["mode"] == "convert":
