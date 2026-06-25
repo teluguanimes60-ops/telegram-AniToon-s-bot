@@ -1,33 +1,43 @@
 HELP_TEXT = """
-🔥 **AniToon Rename Bot - Full Guide**
+🆘 AniToon Rename Bot Guide 🚀
 
 ━━━━━━━━━━━━━━━━━━━━━━
-📁 **RENAME FILE**
-• Click "Rename File"
-• Send any file (video/audio/document)
+
+📁 RENAME FILE
+• Click "Rename"
+• Send your file
 • Send new name (without extension)
-• Bot will rename and send back
+• Bot renames and sends back file
 
 ━━━━━━━━━━━━━━━━━━━━━━
-🔄 **CONVERT SYSTEM**
+
+🔄 CONVERT FILE
 • Click "Convert"
 • Choose:
-   → File ➜ Video
-   → Video ➜ File
-• Send file → bot auto converts
+   🎬 Video → File
+   📁 File → Video
+• Send file and wait for processing
 
 ━━━━━━━━━━━━━━━━━━━━━━
-🖼 **THUMBNAIL SYSTEM**
+
+🖼 THUMBNAIL SYSTEM
 • Click "Thumbnail"
-• Send photo
-• That image will be used as thumbnail
+• Send image
+• Used for your output files
 
 ━━━━━━━━━━━━━━━━━━━━━━
-⚡ **FEATURES**
-• Progress bar 📊
-• Auto thumbnail 🎬
-• Clean UI ✨
-• Fast processing 🚀
+
+⚡ INSTANT EDIT
+• Reply to any file
+• Get instant processed output
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📊 FEATURES
+✔ Fast processing
+✔ Clean UI
+✔ Progress tracking
+✔ Smart file handling
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
