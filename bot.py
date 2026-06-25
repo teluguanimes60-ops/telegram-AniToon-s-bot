@@ -41,6 +41,7 @@ app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN
 
 user_data = {}
 jobs = {}
+user_messages = {}   # track last bot msg per user
 
 # ---------------- CLEAN MSG TRACK ----------------
 last_bot_msg = {}
@@ -74,6 +75,15 @@ def job_buttons(job_id):
         [InlineKeyboardButton("📢 Channel", url="https://t.me/Anitoon_edit/33")]
     ])
 
+async def clean_old(uid, msg):
+    try:
+        old = user_messages.get(uid)
+        if old:
+            await old.delete()
+    except:
+        pass
+
+    user_messages[uid] = msg
 # ---------------- PROGRESS BAR ----------------
 async def progress(current, total, msg, start):
     if total == 0:
@@ -196,10 +206,10 @@ async def file_handler(_, msg):
         last_bot_msg[uid] = m
 
 # ---------------- TEXT HANDLER ----------------
-@app.on_message(filters.text)
-async def text_handler(_, msg):
-    uid = msg.from_user.id
-    state = user_data.get(uid)
+@app.on_message(filters.command("start"))
+async def start(_, msg):
+    m = await msg.reply_text("🔥 AniToon's Rename Bot", reply_markup=main_menu())
+    await clean_old(msg.from_user.id, m)
 
     if not state:
         return
