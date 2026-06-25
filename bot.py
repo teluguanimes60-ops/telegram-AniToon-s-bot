@@ -729,3 +729,12 @@ async def thumb_handler(_, msg):
         )
 
         await clean_old(uid, m)
+
+# ---------------- START BOT ----------------
+
+if __name__ == "__main__":
+    try:
+        print("🚀 AniToon Bot Started")
+        app.run()
+    except Exception as e:
+        print(f"❌ BOT ERROR: {e}")
