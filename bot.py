@@ -193,6 +193,7 @@ async def file_handler(_, msg):
     except:
         pass
 
+    # ---------------- RENAME ----------------
     if state["mode"] == "rename":
         state["file"] = msg
         state["step"] = "name"
@@ -200,27 +201,23 @@ async def file_handler(_, msg):
         await clean_old(uid, m)
         return
 
-if state["mode"] == "convert":
-    job_id = str(uuid.uuid4())[:8]
+    # ---------------- CONVERT ----------------
+    if state["mode"] == "convert":
+        job_id = str(uuid.uuid4())[:8]
 
-    jobs[job_id] = {
-        "uid": uid,
-        "file": msg,
-        "mode": "convert",
-        "control": "run",
-        "thumb_mode": None
-    }
+        jobs[job_id] = {
+            "uid": uid,
+            "file": msg,
+            "mode": "convert",
+            "control": "run",
+            "thumb_mode": None
+        }
 
-    m = await msg.reply(
-        "🖼 Choose thumbnail type",
-        reply_markup=thumb_buttons(job_id)
-    )
+        m = await msg.reply("🖼 Choose thumbnail type", reply_markup=thumb_buttons(job_id))
+        await clean_old(uid, m)
 
-    await clean_old(uid, m)
-
-    asyncio.create_task(process_job(job_id))
-    return
-
+        asyncio.create_task(process_job(job_id))
+        return
 # ---------------- TEXT HANDLER ----------------
 @app.on_message(filters.text)
 async def text_handler(_, msg):
@@ -235,36 +232,29 @@ async def text_handler(_, msg):
     except:
         pass
 
-if state["mode"] == "rename" and state["step"] == "name":
-    state["new_name"] = msg.text
+    # ---------------- RENAME ----------------
+    if state["mode"] == "rename" and state["step"] == "name":
+        state["new_name"] = msg.text
+        job_id = str(uuid.uuid4())[:8]
 
-    job_id = str(uuid.uuid4())[:8]
+        jobs[job_id] = {
+            "uid": uid,
+            "file": state["file"],
+            "new_name": msg.text,
+            "mode": "rename",
+            "control": "run",
+            "thumb_mode": None
+        }
 
-    jobs[job_id] = {
-        "uid": uid,
-        "file": state["file"],
-        "new_name": msg.text,
-        "mode": "rename",
-        "control": "run",
-        "thumb_mode": None
-    }
+        m = await msg.reply("⚙️ Processing rename...", reply_markup=job_buttons(job_id))
+        await clean_old(uid, m)
 
-    m = await msg.reply("⚙️ Processing rename...", reply_markup=job_buttons(job_id))
-
-    await clean_old(uid, m)
-
-    asyncio.create_task(process_job(job_id))
+        asyncio.create_task(process_job(job_id))
+        return
 # ---------------- PROGRESS ----------------
 async def progress(current, total, msg, start):
     if total == 0:
         return
-
-    job_id = None
-
-    for j_id, job in jobs.items():
-        if job["file"].id == msg.id:
-            job_id = j_id
-            break
 
     if not job_id:
         return
