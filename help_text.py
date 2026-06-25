@@ -1,45 +1,39 @@
 HELP_TEXT = """
-🆘 AniToon Rename Bot Guide 🚀
+🆘 AniToon Bot Help
 
-━━━━━━━━━━━━━━━━━━━━━━
+📁 Rename File
+• Rename any file instantly.
 
-📁 RENAME FILE
-• Click "Rename"
-• Send your file
-• Send new name (without extension)
-• Bot renames and sends back file
+🔄 Convert File
+• Convert media files.
+• Video ➜ MP4
+• File ➜ Document
 
-━━━━━━━━━━━━━━━━━━━━━━
+🖼 Thumbnail
+• Save your own thumbnail.
+• Use Auto Thumbnail.
+• Remove thumbnail completely.
 
-🔄 CONVERT FILE
-• Click "Convert"
-• Choose:
-   🎬 Video → File
-   📁 File → Video
-• Send file and wait for processing
+⚡ Instant Edit
+• Send file.
+• Send new name.
+• Bot instantly renames.
 
-━━━━━━━━━━━━━━━━━━━━━━
+⏸ Pause
+• Pause current task.
 
-🖼 THUMBNAIL SYSTEM
-• Click "Thumbnail"
-• Send image
-• Used for your output files
+▶ Resume
+• Resume paused task.
 
-━━━━━━━━━━━━━━━━━━━━━━
+❌ Cancel
+• Cancel current task.
 
-⚡ INSTANT EDIT
-• Reply to any file
-• Get instant processed output
+📢 Channel
+• Join:
+@AniToon_Edit
 
-━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-📊 FEATURES
-✔ Fast processing
-✔ Clean UI
-✔ Progress tracking
-✔ Smart file handling
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-🚀 Powered By: @AniToon_Edit
+🚀 Powered By:
+@AniToon_Edit
 """
