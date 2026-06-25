@@ -7,7 +7,6 @@ API_ID = int(os.environ.get("API_ID"))
 API_HASH = os.environ.get("API_HASH")
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 from flask import Flask
-
 from thumbnail import save_thumb, get_thumb
 
 # ---------------- FLASK ----------------
@@ -24,6 +23,12 @@ def run_web():
 threading.Thread(target=run_web).start()
 
 # ---------------- BOT ----------------
+from os import getenv
+
+API_ID = int(getenv("API_ID"))
+API_HASH = getenv("API_HASH")
+BOT_TOKEN = getenv("BOT_TOKEN")
+
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 user_data = {}
