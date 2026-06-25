@@ -1,6 +1,8 @@
 import os
 import time
 import threading
+import asyncio
+import subprocess
 
 from flask import Flask
 from pyrogram import Client, filters
@@ -9,15 +11,18 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from auto_thumb import generate_thumbnail, setup_ffmpeg, FFMPEG_PATH
 from thumbnail import save_thumb, get_thumb
 
-# ---------------- SAFETY ENV CHECK ----------------
+# ---------------- ENV ----------------
 API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 if not API_ID or not API_HASH or not BOT_TOKEN:
-    raise Exception("❌ Missing API_ID / API_HASH / BOT_TOKEN in environment variables")
+    raise Exception("❌ Missing API_ID / API_HASH / BOT_TOKEN")
 
 API_ID = int(API_ID)
+
+# ---------------- FFMPEG INIT ----------------
+setup_ffmpeg()
 
 # ---------------- FLASK KEEP ALIVE ----------------
 web = Flask(__name__)
@@ -36,11 +41,25 @@ threading.Thread(target=run_web, daemon=True).start()
 app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 user_data = {}
+control_data = {}
 
-# ---------------- PROGRESS BAR ----------------
+# ---------------- CONTROL HELP ----------------
+def is_cancel(uid):
+    return control_data.get(uid) == "cancel"
+
+def is_pause(uid):
+    return control_data.get(uid) == "pause"
+
+# ---------------- PROGRESS ----------------
 async def progress(current, total, status, start):
     if total == 0:
         return
+
+    if is_cancel(status.chat.id):
+        return
+
+    while is_pause(status.chat.id):
+        await asyncio.sleep(1)
 
     now = time.time()
     diff = now - start
@@ -51,8 +70,7 @@ async def progress(current, total, status, start):
     speed = current / diff
     eta = (total - current) / speed if speed else 0
 
-    bar_len = int(percent / 5)
-    bar = "█" * bar_len + "░" * (20 - bar_len)
+    bar = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
 
     text = (
         f"📦 Processing...\n\n"
@@ -81,20 +99,19 @@ def convert_menu():
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ])
 
-def back_btn():
+def process_btn(uid):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔙 Back", callback_data="back")]
-    ])
-
-def process_btn():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("❌ Cancel", callback_data="cancel")]
+        [
+            InlineKeyboardButton("⏸ Pause", callback_data=f"pause_{uid}"),
+            InlineKeyboardButton("▶️ Resume", callback_data=f"resume_{uid}")
+        ],
+        [InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{uid}")],
+        [InlineKeyboardButton("📢 AniToon Channel", url="https://t.me/Anitoon_edit/33")]
     ])
 
 # ---------------- START ----------------
 @app.on_message(filters.command("start"))
 async def start(_, message):
-    setup_ffmpeg()
     await message.reply_text("🔥 AniToon Bot", reply_markup=main_menu())
 
 # ---------------- CALLBACK ----------------
@@ -107,24 +124,32 @@ async def cb(_, q):
 
     elif q.data == "rename":
         user_data[uid] = {"mode": "rename"}
-        await q.message.edit_text("Send file", reply_markup=back_btn())
+        await q.message.edit_text("Send file", reply_markup=main_menu())
 
     elif q.data == "convert":
         await q.message.edit_text("Choose type", reply_markup=convert_menu())
 
     elif q.data == "f2v":
         user_data[uid] = {"mode": "f2v"}
-        await q.message.edit_text("Send file", reply_markup=back_btn())
+        await q.message.edit_text("Send file")
 
     elif q.data == "v2f":
         user_data[uid] = {"mode": "v2f"}
-        await q.message.edit_text("Send video", reply_markup=back_btn())
+        await q.message.edit_text("Send video")
 
-    elif q.data == "thumb":
-        user_data[uid] = {"mode": "thumb"}
-        await q.message.edit_text("Send photo", reply_markup=back_btn())
+    elif q.data == "pause_" + str(uid):
+        control_data[uid] = "pause"
+        await q.answer("Paused ⏸")
 
-# ---------------- FILE HANDLER ----------------
+    elif q.data == "resume_" + str(uid):
+        control_data[uid] = "run"
+        await q.answer("Resumed ▶️")
+
+    elif q.data == "cancel_" + str(uid):
+        control_data[uid] = "cancel"
+        await q.message.edit_text("❌ Cancelled")
+
+# ---------------- FILE ----------------
 @app.on_message(filters.document | filters.video | filters.audio)
 async def file_handler(_, msg):
     uid = msg.from_user.id
@@ -134,17 +159,12 @@ async def file_handler(_, msg):
 
     user_data[uid]["file"] = msg
 
-    try:
-        await msg.delete()
-    except:
-        pass
-
     if user_data[uid]["mode"] == "rename":
-        user_data[uid]["msg"] = await msg.reply("Send new name")
+        await msg.reply("Send new name")
     else:
         await process_file(msg, uid)
 
-# ---------------- TEXT HANDLER ----------------
+# ---------------- TEXT ----------------
 @app.on_message(filters.text)
 async def text_handler(_, msg):
     uid = msg.from_user.id
@@ -152,23 +172,16 @@ async def text_handler(_, msg):
     if uid not in user_data:
         return
 
-    data = user_data[uid]
-
-    try:
-        await msg.delete()
-    except:
-        pass
-
-    if data["mode"] == "rename":
-        data["new_name"] = msg.text.strip()
+    if user_data[uid]["mode"] == "rename":
+        user_data[uid]["new_name"] = msg.text.strip()
         await process_file(msg, uid)
 
-# ---------------- PROCESS FILE ----------------
+# ---------------- PROCESS ----------------
 async def process_file(msg, uid):
     data = user_data[uid]
     file_msg = data["file"]
 
-    status = await msg.reply("⏳ Starting...", reply_markup=process_btn())
+    status = await msg.reply("📥 Downloading...", reply_markup=process_btn(uid))
     start = time.time()
 
     file_path = await file_msg.download(
@@ -176,33 +189,38 @@ async def process_file(msg, uid):
         progress_args=(status, start)
     )
 
-    # ---------------- THUMB ----------------
-    thumb = generate_thumbnail(file_path)
-    if not thumb:
-        thumb = get_thumb()
+    if is_cancel(uid):
+        await status.edit_text("❌ Cancelled")
+        return
+
+    await status.edit_text("⚙️ Processing...", reply_markup=process_btn(uid))
+
+    thumb = generate_thumbnail(file_path) or get_thumb()
 
     # ---------------- RENAME ----------------
     if data["mode"] == "rename":
         ext = file_path.split(".")[-1]
-        new_path = os.path.join(
-            os.path.dirname(file_path),
-            f"{data['new_name']}.{ext}"
-        )
+        new_path = os.path.join(os.path.dirname(file_path), f"{data['new_name']}.{ext}")
         os.rename(file_path, new_path)
         file_path = new_path
 
     # ---------------- CONVERT ----------------
-    elif data["mode"] == "f2v":
+    if data["mode"] == "f2v":
         new_path = file_path + ".mp4"
-        os.system(f'"{FFMPEG_PATH}" -i "{file_path}" "{new_path}"')
+        subprocess.run([FFMPEG_PATH, "-i", file_path, new_path])
         file_path = new_path
 
     elif data["mode"] == "v2f":
         new_path = file_path + ".mkv"
-        os.system(f'"{FFMPEG_PATH}" -i "{file_path}" "{new_path}"')
+        subprocess.run([FFMPEG_PATH, "-i", file_path, new_path])
         file_path = new_path
 
-    # ---------------- SEND ----------------
+    if is_cancel(uid):
+        await status.edit_text("❌ Cancelled")
+        return
+
+    await status.edit_text("📤 Uploading...", reply_markup=process_btn(uid))
+
     await msg.reply_document(
         file_path,
         thumb=thumb,
@@ -218,7 +236,7 @@ async def process_file(msg, uid):
     await status.delete()
     user_data.pop(uid, None)
 
-# ---------------- THUMB HANDLER ----------------
+# ---------------- THUMB ----------------
 @app.on_message(filters.photo)
 async def thumb_handler(_, msg):
     path = await msg.download()
