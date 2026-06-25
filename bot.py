@@ -11,7 +11,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from auto_thumb import generate_thumbnail, setup_ffmpeg, FFMPEG_PATH
 from thumbnail import save_thumb, get_thumb
 from help_text import HELP_TEXT
-
+user_last_msg = {}
 # ---------------- ENV ----------------
 API_ID = int(os.getenv("API_ID", 0))
 API_HASH = os.getenv("API_HASH")
@@ -22,6 +22,14 @@ if not API_ID or not API_HASH or not BOT_TOKEN:
 
 setup_ffmpeg()
 
+async def clean_old(uid, msg):
+    old = user_last_msg.get(uid)
+    if old:
+        try:
+            await old.delete()
+        except:
+            pass
+    user_last_msg[uid] = msg
 # ---------------- FLASK ----------------
 web = Flask(__name__)
 
@@ -192,22 +200,26 @@ async def file_handler(_, msg):
         await clean_old(uid, m)
         return
 
-    if state["mode"] == "convert":
-        job_id = str(uuid.uuid4())[:8]
+if state["mode"] == "convert":
+    job_id = str(uuid.uuid4())[:8]
 
-        jobs[job_id] = {
-            "uid": uid,
-            "file": msg,
-            "mode": "convert",
-            "control": "run",
-            "thumb_mode": None
-        }
+    jobs[job_id] = {
+        "uid": uid,
+        "file": msg,
+        "mode": "convert",
+        "control": "run",
+        "thumb_mode": None
+    }
 
-        m = await msg.reply("🖼 Choose thumbnail type", reply_markup=thumb_buttons(job_id))
-        await clean_old(uid, m)
+    m = await msg.reply(
+        "🖼 Choose thumbnail type",
+        reply_markup=thumb_buttons(job_id)
+    )
 
-        asyncio.create_task(process_job(job_id))
-        return
+    await clean_old(uid, m)
+
+    asyncio.create_task(process_job(job_id))
+    return
 
 # ---------------- TEXT HANDLER ----------------
 @app.on_message(filters.text)
@@ -223,34 +235,41 @@ async def text_handler(_, msg):
     except:
         pass
 
-    if state["mode"] == "rename" and state["step"] == "name":
-        state["new_name"] = msg.text
-        job_id = str(uuid.uuid4())[:8]
+if state["mode"] == "rename" and state["step"] == "name":
+    state["new_name"] = msg.text
 
-        jobs[job_id] = {
-            "uid": uid,
-            "file": state["file"],
-            "new_name": msg.text,
-            "mode": "rename",
-            "control": "run",
-            "thumb_mode": None
-        }
+    job_id = str(uuid.uuid4())[:8]
 
-        m = await msg.reply("⚙️ Processing rename...", reply_markup=job_buttons(job_id))
-        await clean_old(uid, m)
+    jobs[job_id] = {
+        "uid": uid,
+        "file": state["file"],
+        "new_name": msg.text,
+        "mode": "rename",
+        "control": "run",
+        "thumb_mode": None
+    }
 
-        asyncio.create_task(process_job(job_id))
+    m = await msg.reply("⚙️ Processing rename...", reply_markup=job_buttons(job_id))
 
+    await clean_old(uid, m)
+
+    asyncio.create_task(process_job(job_id))
 # ---------------- PROGRESS ----------------
 async def progress(current, total, msg, start):
     if total == 0:
         return
 
-    job_id = msg.chat.id
-    job = jobs.get(job_id)
+    job_id = None
 
-    if not job:
+    for j_id, job in jobs.items():
+        if job["file"].id == msg.id:
+            job_id = j_id
+            break
+
+    if not job_id:
         return
+
+    job = jobs[job_id]
 
     if job["control"] == "cancel":
         return
@@ -274,23 +293,22 @@ async def progress(current, total, msg, start):
 
 # ---------------- JOB PROCESSOR ----------------
 async def process_job(job_id):
-    job = jobs[job_id]
+    job = jobs.get(job_id)
+    if not job:
+        return
+
     msg = job["file"]
 
     status = await msg.reply("📥 Downloading...", reply_markup=job_buttons(job_id))
 
     file_path = await msg.download()
 
-    while True:
-        if job["control"] == "cancel":
-            await status.edit_text("❌ Cancelled")
-            return
+    while job["control"] == "pause":
+        await asyncio.sleep(1)
 
-        if job["control"] == "pause":
-            await asyncio.sleep(1)
-            continue
-
-        break
+    if job["control"] == "cancel":
+        await status.edit_text("❌ Cancelled")
+        return
 
     await status.edit_text("⚙️ Processing...", reply_markup=job_buttons(job_id))
 
@@ -304,11 +322,13 @@ async def process_job(job_id):
 
     elif job["mode"] == "convert":
         new_path = file_path + ".mp4"
+
         subprocess.run(
             [FFMPEG_PATH, "-i", file_path, new_path],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
+
         file_path = new_path
 
     await status.edit_text("📤 Uploading...", reply_markup=job_buttons(job_id))
