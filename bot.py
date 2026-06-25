@@ -9,9 +9,6 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from auto_thumb import generate_thumbnail, setup_ffmpeg, FFMPEG_PATH
 from thumbnail import save_thumb, get_thumb
 
-# ---------------- INIT FFMPEG (ONLY ONCE) ----------------
-setup_ffmpeg()
-
 # ---------------- SAFETY ENV CHECK ----------------
 API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
@@ -97,6 +94,7 @@ def process_btn():
 # ---------------- START ----------------
 @app.on_message(filters.command("start"))
 async def start(_, message):
+    setup_ffmpeg()
     await message.reply_text("🔥 AniToon Bot", reply_markup=main_menu())
 
 # ---------------- CALLBACK ----------------
