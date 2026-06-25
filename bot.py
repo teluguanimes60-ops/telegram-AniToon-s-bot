@@ -1,10 +1,12 @@
 import os
 import time
+time.time()
 import asyncio
 import subprocess
 import threading
 import uuid
-
+from auto_thumb import generate_thumbnail, setup_ffmpeg, FFMPEG_PATH
+from thumbnail import save_thumb, get_thumb
 from flask import Flask
 
 from pyrogram import Client, filters
