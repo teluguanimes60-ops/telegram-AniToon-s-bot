@@ -137,8 +137,15 @@ async def cb(_, q):
         await clean_old(uid, m)
 
     elif data == "convert":
-        user_data[uid] = {"mode": "convert", "step": "file"}
-        m = await q.message.reply_text("🔄 Send file to convert", reply_markup=back_btn())
+        user_data[uid] = {
+            "mode": "convert",
+            "step": "file"
+        }
+
+        m = await q.message.reply_text(
+            "🔄 Send file/video\n\nThen choose output format",
+            reply_markup=back_btn()
+        )
         await clean_old(uid, m)
 
     elif data == "thumb":
@@ -185,6 +192,18 @@ async def cb(_, q):
     elif data.startswith("thumb_none_"):
         jobs[data.split("_")[2]]["thumb_mode"] = "none"
         await q.answer("No Thumb")
+        
+    elif data.startswith("conv_video_"):
+        job_id = data.split("_")[2]
+        jobs[job_id]["convert_type"] = "video"
+        asyncio.create_task(process_job(job_id))
+        await q.answer("Video selected")
+
+    elif data.startswith("conv_file_"):
+        job_id = data.split("_")[2]
+        jobs[job_id]["convert_type"] = "file"
+        asyncio.create_task(process_job(job_id))
+        await q.answer("File selected")
 
 # ---------------- FILE HANDLER ----------------
 @app.on_message(filters.document | filters.video | filters.audio)
@@ -221,22 +240,30 @@ if state["mode"] == "instant":
         return
 
     # ---------------- CONVERT ----------------
-    if state["mode"] == "convert":
-        job_id = str(uuid.uuid4())[:8]
+if state["mode"] == "convert":
+    job_id = str(uuid.uuid4())[:8]
 
-        jobs[job_id] = {
-            "uid": uid,
-            "file": msg,
-            "mode": "convert",
-            "control": "run",
-            "thumb_mode": None
-        }
+    jobs[job_id] = {
+        "uid": uid,
+        "file": msg,
+        "mode": "convert",
+        "control": "run",
+        "thumb_mode": None,
+        "convert_type": None
+    }
 
-        m = await msg.reply("🖼 Choose thumbnail type", reply_markup=thumb_buttons(job_id))
-        await clean_old(uid, m)
+    m = await msg.reply(
+        "Choose output type:\n\n📹 Video MP4\n📁 File (keep original)",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("📹 Video", callback_data=f"conv_video_{job_id}"),
+                InlineKeyboardButton("📁 File", callback_data=f"conv_file_{job_id}")
+            ]
+        ])
+    )
 
-        asyncio.create_task(process_job(job_id))
-        return
+    await clean_old(uid, m)
+    return
 # ---------------- TEXT HANDLER ----------------
 @app.on_message(filters.text)
 async def text_handler(_, msg):
@@ -295,28 +322,24 @@ async def progress(current, total, msg, start):
     if total == 0:
         return
 
-    if not job_id:
-        return
-
-    job = jobs[job_id]
-
-    if job["control"] == "cancel":
-        return
-
-    while job["control"] == "pause":
-        await asyncio.sleep(0.5)
-
     percent = current * 100 / total
-    bar = "█" * int(percent // 5) + "░" * (20 - int(percent // 5))
+    speed = current / (time.time() - start + 1)
+
+    eta = (total - current) / (speed + 1)
+
+    bar = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
 
     text = f"""
 📦 Processing...
 
 [{bar}] {percent:.1f}%
+
+⚡ Speed: {speed/1024:.1f} KB/s
+⏳ ETA: {int(eta)} sec
 """
 
     try:
-        await msg.edit_text(text, reply_markup=job_buttons(job_id))
+        await msg.edit_text(text, reply_markup=None)
     except:
         pass
 
@@ -330,7 +353,12 @@ async def process_job(job_id):
 
     status = await msg.reply("📥 Downloading...", reply_markup=job_buttons(job_id))
 
-    file_path = await msg.download()
+    start_time = time.time()
+
+    file_path = await msg.download(
+        progress=progress,
+        progress_args=(status, start_time)
+    )
 
     while job["control"] == "pause":
         await asyncio.sleep(1)
