@@ -7,13 +7,21 @@ from flask import Flask
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from auto_thumb import generate_thumbnail
+from auto_thumb import generate_thumbnail, setup_ffmpeg
 from thumbnail import save_thumb, get_thumb
 
-# ---------------- ENV ----------------
-API_ID = int(os.environ.get("API_ID"))
-API_HASH = os.environ.get("API_HASH")
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+# ---------------- SAFETY ENV CHECK ----------------
+API_ID = os.getenv("API_ID")
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+if not API_ID or not API_HASH or not BOT_TOKEN:
+    raise Exception("❌ Missing API_ID / API_HASH / BOT_TOKEN in environment variables")
+
+API_ID = int(API_ID)
+
+# ---------------- INIT FFMPEG ----------------
+setup_ffmpeg()
 
 # ---------------- FLASK ----------------
 web = Flask(__name__)
@@ -134,7 +142,7 @@ async def file_handler(_, msg):
     except:
         pass
 
-    if user_data[uid]["mode"] in ["rename"]:
+    if user_data[uid]["mode"] == "rename":
         user_data[uid]["msg"] = await msg.reply("Send new name")
     else:
         await process_file(msg, uid)
@@ -215,7 +223,7 @@ async def process_file(msg, uid):
     await status.delete()
     user_data.pop(uid, None)
 
-# ---------------- THUMB ----------------
+# ---------------- THUMB HANDLER ----------------
 @app.on_message(filters.photo)
 async def thumb_handler(_, msg):
     path = await msg.download()
