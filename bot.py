@@ -45,6 +45,7 @@ app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN
 
 user_data = {}
 jobs = {}
+thumb_mode = {}   # 🔥 NEW
 
 # ---------------- BUTTONS ----------------
 def main_menu():
@@ -66,12 +67,17 @@ def job_buttons(job_id):
         [InlineKeyboardButton("📢 Channel", url="https://t.me/Anitoon_edit/33")]
     ])
 
-def back_menu():
+def thumb_menu():
     return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("💾 Saved Thumb", callback_data="t_saved"),
+            InlineKeyboardButton("⚙️ Auto Thumb", callback_data="t_auto")
+        ],
+        [InlineKeyboardButton("🚫 No Thumb", callback_data="t_none")],
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ])
 
-# ---------------- START (FIXED POSITION) ----------------
+# ---------------- START ----------------
 @app.on_message(filters.command("start"))
 async def start(_, msg):
     await msg.reply_text("🔥 AniToon Bot is Alive", reply_markup=main_menu())
@@ -85,21 +91,36 @@ async def cb(_, q):
         user_data[uid] = {}
         await q.message.edit_text("🔥 Main Menu", reply_markup=main_menu())
 
+    elif q.data == "thumb":
+        user_data[uid] = {"mode": "thumb"}
+        await q.message.edit_text("🖼 Choose thumbnail option:", reply_markup=thumb_menu())
+
+    elif q.data == "t_saved":
+        if not get_thumb():
+            await q.answer("❌ No saved thumbnail found")
+        else:
+            thumb_mode[uid] = "saved"
+            await q.message.edit_text("✅ Saved thumbnail selected")
+
+    elif q.data == "t_auto":
+        thumb_mode[uid] = "auto"
+        await q.message.edit_text("⚙️ Auto thumbnail enabled")
+
+    elif q.data == "t_none":
+        thumb_mode[uid] = "none"
+        await q.message.edit_text("🚫 No thumbnail selected")
+
     elif q.data == "rename":
         user_data[uid] = {"mode": "rename", "step": "wait_file"}
-        await q.message.edit_text("📁 Send your file to rename", reply_markup=back_menu())
+        await q.message.edit_text("📁 Send file to rename", reply_markup=thumb_menu())
 
     elif q.data == "convert":
         user_data[uid] = {"mode": "convert", "step": "wait_file"}
-        await q.message.edit_text("🔄 Send file/video to convert", reply_markup=back_menu())
-
-    elif q.data == "thumb":
-        user_data[uid] = {"mode": "thumb"}
-        await q.message.edit_text("🖼 Send image to save thumbnail", reply_markup=back_menu())
+        await q.message.edit_text("🔄 Send file/video to convert", reply_markup=thumb_menu())
 
     elif q.data == "instant":
         user_data[uid] = {"mode": "instant"}
-        await q.message.edit_text("⚡ Reply to file for instant edit", reply_markup=back_menu())
+        await q.message.edit_text("⚡ Reply to file for instant edit", reply_markup=main_menu())
 
     elif q.data == "help":
         await q.message.edit_text(HELP_TEXT, reply_markup=main_menu())
@@ -135,7 +156,7 @@ async def file_handler(_, msg):
     if state.get("mode") == "rename" and state.get("step") == "wait_file":
         state["file"] = msg
         state["step"] = "wait_name"
-        await msg.reply("✏️ Now send new file name (without extension)")
+        await msg.reply("✏️ Send new name (no extension)")
         return
 
     if state.get("mode") == "convert":
@@ -149,9 +170,7 @@ async def file_handler(_, msg):
         }
 
         await msg.reply("📥 File received", reply_markup=job_buttons(job_id))
-
         asyncio.create_task(process_job(job_id))
-        return
 
 # ---------------- TEXT HANDLER ----------------
 @app.on_message(filters.text)
@@ -180,7 +199,7 @@ async def text_handler(_, msg):
         await msg.reply("⚙️ Processing rename...", reply_markup=job_buttons(job_id))
         asyncio.create_task(process_job(job_id))
 
-# ---------------- JOB PROCESSOR (FIXED) ----------------
+# ---------------- JOB PROCESSOR ----------------
 async def process_job(job_id):
     job = jobs[job_id]
     msg = job["file"]
@@ -189,33 +208,46 @@ async def process_job(job_id):
 
     file_path = await msg.download()
 
-    # ---------------- SAFE PAUSE / CANCEL ----------------
     while True:
         if job["control"] == "cancel":
             await status.edit_text("❌ Cancelled")
             return
-
         if job["control"] == "pause":
             await asyncio.sleep(1)
             continue
-
         break
 
-    await status.edit_text("⚙️ Processing...", reply_markup=job_buttons(job_id))
+    await status.edit_text("⚙️ Processing...")
 
-    thumb = get_thumb()
-    if not thumb:
+    # ---------------- THUMB LOGIC ----------------
+    uid = job["uid"]
+    thumb = None
+
+    mode = thumb_mode.get(uid, "auto")
+
+    if mode == "saved":
+        thumb = get_thumb()
+        if not thumb:
+            await status.edit_text("❌ No saved thumbnail found. Please upload one first.")
+            return
+
+    elif mode == "auto":
         try:
             thumb = generate_thumbnail(file_path)
         except:
             thumb = None
 
+    elif mode == "none":
+        thumb = None
+
+    # ---------------- RENAME ----------------
     if job["mode"] == "rename":
         ext = file_path.split(".")[-1]
         new_path = os.path.join(os.path.dirname(file_path), f"{job['new_name']}.{ext}")
         os.rename(file_path, new_path)
         file_path = new_path
 
+    # ---------------- CONVERT ----------------
     elif job["mode"] == "convert":
         new_path = file_path + ".mp4"
         subprocess.run([FFMPEG_PATH, "-i", file_path, new_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -225,7 +257,7 @@ async def process_job(job_id):
         await status.edit_text("❌ Cancelled")
         return
 
-    await status.edit_text("📤 Uploading...", reply_markup=job_buttons(job_id))
+    await status.edit_text("📤 Uploading...")
 
     await msg.reply_document(file_path, thumb=thumb)
 
@@ -237,7 +269,7 @@ async def process_job(job_id):
     await status.delete()
     jobs.pop(job_id, None)
 
-# ---------------- THUMB ----------------
+# ---------------- THUMB SAVE ----------------
 @app.on_message(filters.photo)
 async def thumb_handler(_, msg):
     if msg.from_user.id in user_data and user_data[msg.from_user.id].get("mode") == "thumb":
