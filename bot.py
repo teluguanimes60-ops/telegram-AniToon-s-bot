@@ -651,6 +651,55 @@ async def thumb_select(_, q):
             process_job(job_id)
         )
 
+# ---------------- PROGRESS ----------------
+
+async def progress(
+    current,
+    total,
+    status,
+    start_time
+):
+
+    try:
+
+        percent = current * 100 / total
+
+        speed = current / (
+            time.time() - start_time + 1
+        )
+
+        eta = (
+            total - current
+        ) / (speed + 1)
+
+        filled = int(percent / 5)
+
+        bar = (
+            "█" * filled
+            +
+            "░" * (20 - filled)
+        )
+
+        text = f"""
+📥 Downloading...
+
+[{bar}]
+
+📊 {percent:.1f}%
+
+⚡ Speed: {speed/1024:.1f} KB/s
+
+⏳ ETA: {int(eta)} sec
+"""
+
+        await status.edit_text(
+            text,
+            reply_markup=status.reply_markup
+        )
+
+    except:
+        pass
+        
 # ---------------- PROCESS JOB ----------------
 
 async def process_job(job_id):
