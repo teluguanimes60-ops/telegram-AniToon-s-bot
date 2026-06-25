@@ -13,7 +13,7 @@ from pyrogram.types import (
     InlineKeyboardButton
 )
 
-from auto_tumb import (
+from auto_thumb import (
     generate_thumbnail,
     setup_ffmpeg,
     FFMPEG_PATH
