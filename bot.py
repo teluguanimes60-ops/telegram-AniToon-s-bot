@@ -26,6 +26,26 @@ from thumbnail import (
 
 from help_text import HELP_TEXT
 
+from flask import Flask
+import threading
+import os
+
+web = Flask(__name__)
+
+@web.route("/")
+def home():
+    return "AniToon Bot Running 24/7 ✅"
+
+def run_web():
+    web.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000))
+    )
+
+threading.Thread(
+    target=run_web,
+    daemon=True
+).start()
 # ---------------- ENV ----------------
 
 API_ID = int(os.getenv("API_ID", "0"))
