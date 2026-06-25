@@ -1,7 +1,6 @@
 from auto_thumb import generate_thumbnail
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import API_ID, API_HASH, BOT_TOKEN
 import os, time, asyncio, threading
 from flask import Flask
 
@@ -26,32 +25,32 @@ app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN
 user_data = {}
 
 # ---------------- PROGRESS BAR ----------------
-async def progress(current, total, message, start):
+async def progress(current, total, status, start):
     now = time.time()
     diff = now - start
-    if diff == 0:
+
+    if diff < 1:
         return
 
     percent = current * 100 / total
     speed = current / diff
-    eta = (total - current) / speed if speed > 0 else 0
+    eta = (total - current) / speed if speed else 0
 
-    bar = "█" * int(percent // 5) + "░" * (20 - int(percent // 5))
+    bar = "█" * int(percent / 5)
+    bar += "░" * (20 - len(bar))
 
-    text = f"""
-📦 Processing...
-
-[{bar}] {percent:.1f}%
-
-⚡ Speed: {speed/1024/1024:.2f} MB/s
-⏳ ETA: {int(eta)} sec
-"""
+    text = (
+        f"📦 Processing...\n\n"
+        f"[{bar}]\n"
+        f"📊 {percent:.1f}%\n\n"
+        f"⚡ Speed: {speed/1024/1024:.2f} MB/s\n"
+        f"⏳ ETA: {int(eta)} sec"
+    )
 
     try:
-        await message.edit(text)
+        await status.edit_text(text)
     except:
         pass
-
 # ---------------- BUTTONS ----------------
 def main_menu():
     return InlineKeyboardMarkup([
@@ -178,13 +177,19 @@ async def process_file(client, message, user_id):
 
     thumb = get_thumb()
 
-    if not thumb and file_msg.video:
+    if not thumb:
+    try:
         thumb = generate_thumbnail(file_path)
+    except:
+        thumb = None
 
     # ---------- RENAME ----------
     if data["mode"] == "rename":
         ext = file_path.split(".")[-1]
-        new_path = f"{data['new_name']}.{ext}"
+        new_path = os.path.join(
+        os.path.dirname(file_path),
+        f"{data['new_name']}.{ext}"
+        )
         os.rename(file_path, new_path)
         file_path = new_path
 
@@ -193,9 +198,10 @@ async def process_file(client, message, user_id):
         new_path = file_path + ".mp4"
         os.system(f"ffmpeg -i '{file_path}' '{new_path}'")
         file_path = new_path
-
+    base = os.path.splitext(file_path)[0]
+    new_path = base + ".mkv"
     elif data["mode"] == "v2f":
-        new_path = file_path.replace(".mp4", ".mkv")
+        
         os.rename(file_path, new_path)
         file_path = new_path
 
