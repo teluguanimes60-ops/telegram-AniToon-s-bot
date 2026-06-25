@@ -1,5 +1,4 @@
 import os
-import time
 import asyncio
 import subprocess
 import threading
@@ -42,20 +41,17 @@ user_data = {}
 jobs = {}
 user_last_msg = {}
 last_msg = {}
-job_thumb_choice = {}
+
 # ---------------- CLEAN UI ----------------
-async def send_msg(uid, chat, text, reply_markup=None):
-    msg = await chat.reply_text(text, reply_markup=reply_markup)
-
-    try:
-        old = last_msg.get(uid)
-        if old:
+async def clean_old(uid, msg):
+    old = user_last_msg.get(uid)
+    if old:
+        try:
             await old.delete()
-    except:
-        pass
+        except:
+            pass
+    user_last_msg[uid] = msg
 
-    last_msg[uid] = msg
-    return msg
 # ---------------- BUTTONS ----------------
 def main_menu(name="User"):
     return InlineKeyboardMarkup([
@@ -88,14 +84,7 @@ def thumb_buttons(job_id):
         [InlineKeyboardButton("❌ No Thumb", callback_data=f"thumb_none_{job_id}")],
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ])
-async def clean_old(uid, msg):
-    old = user_last_msg.get(uid)
-    if old:
-        try:
-            await old.delete()
-        except:
-            pass
-    user_last_msg[uid] = msg
+
 # ---------------- START ----------------
 @app.on_message(filters.command("start"))
 async def start(_, msg):
@@ -117,6 +106,7 @@ async def start(_, msg):
 
     m = await msg.reply_text(text, reply_markup=main_menu(name))
     await clean_old(msg.from_user.id, m)
+
 # ---------------- CALLBACK ----------------
 @app.on_callback_query()
 async def cb(_, q):
@@ -157,7 +147,6 @@ async def cb(_, q):
         m = await q.message.reply_text(HELP_TEXT, reply_markup=main_menu())
         await clean_old(uid, m)
 
-    # ---------------- JOB CONTROLS ----------------
     elif data.startswith("pause_"):
         jobs[data.split("_")[1]]["control"] = "pause"
         await q.answer("Paused ⏸")
@@ -170,7 +159,6 @@ async def cb(_, q):
         jobs[data.split("_")[1]]["control"] = "cancel"
         await q.answer("Cancelled ❌")
 
-    # ---------------- THUMB CHOICES ----------------
     elif data.startswith("thumb_saved_"):
         jobs[data.split("_")[2]]["thumb_mode"] = "saved"
         await q.answer("Saved Thumb")
@@ -197,7 +185,6 @@ async def file_handler(_, msg):
     except:
         pass
 
-    # ---------------- RENAME ----------------
     if state["mode"] == "rename":
         state["file"] = msg
         state["step"] = "name"
@@ -205,7 +192,6 @@ async def file_handler(_, msg):
         await clean_old(uid, m)
         return
 
-    # ---------------- CONVERT ----------------
     if state["mode"] == "convert":
         job_id = str(uuid.uuid4())[:8]
 
@@ -251,20 +237,12 @@ async def text_handler(_, msg):
         }
 
         m = await msg.reply("⚙️ Processing rename...", reply_markup=job_buttons(job_id))
-    await clean_old(uid, m)
+        await clean_old(uid, m)
 
-    asyncio.create_task(process_job(job_id))
+        asyncio.create_task(process_job(job_id))
 
-# ---------------- JOB PROCESSOR ----------------
-async def process_job(job_id):
-    job = jobs[job_id]
-    msg = job["file"]
-
-    status = await msg.reply("📥 Downloading...", reply_markup=job_buttons(job_id))
-
-    file_path = await msg.download()
-
-    async def progress(current, total, msg, start):
+# ---------------- PROGRESS ----------------
+async def progress(current, total, msg, start):
     if total == 0:
         return
 
@@ -281,8 +259,7 @@ async def process_job(job_id):
         await asyncio.sleep(0.5)
 
     percent = current * 100 / total
-
-    bar = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
+    bar = "█" * int(percent // 5) + "░" * (20 - int(percent // 5))
 
     text = f"""
 📦 Processing...
@@ -294,8 +271,16 @@ async def process_job(job_id):
         await msg.edit_text(text, reply_markup=job_buttons(job_id))
     except:
         pass
-        await clean_old(job["uid"], status)
-    # ---------------- CONTROL ----------------
+
+# ---------------- JOB PROCESSOR ----------------
+async def process_job(job_id):
+    job = jobs[job_id]
+    msg = job["file"]
+
+    status = await msg.reply("📥 Downloading...", reply_markup=job_buttons(job_id))
+
+    file_path = await msg.download()
+
     while True:
         if job["control"] == "cancel":
             await status.edit_text("❌ Cancelled")
@@ -309,29 +294,14 @@ async def process_job(job_id):
 
     await status.edit_text("⚙️ Processing...", reply_markup=job_buttons(job_id))
 
-    # ---------------- THUMB ----------------
-    thumb = None
+    thumb = get_thumb() or generate_thumbnail(file_path)
 
-    if job.get("thumb_mode") == "saved":
-        thumb = get_thumb()
-
-    elif job.get("thumb_mode") == "auto":
-        thumb = generate_thumbnail(file_path)
-
-    elif job.get("thumb_mode") == "none":
-        thumb = None
-
-    else:
-        thumb = get_thumb() or generate_thumbnail(file_path)
-
-    # ---------------- RENAME ----------------
     if job["mode"] == "rename":
         ext = file_path.split(".")[-1]
         new_path = file_path.replace(ext, job["new_name"] + "." + ext)
         os.rename(file_path, new_path)
         file_path = new_path
 
-    # ---------------- CONVERT ----------------
     elif job["mode"] == "convert":
         new_path = file_path + ".mp4"
         subprocess.run(
