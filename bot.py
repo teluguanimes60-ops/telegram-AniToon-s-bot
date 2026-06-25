@@ -5,6 +5,24 @@ import asyncio
 import subprocess
 
 from flask import Flask
+from threading import Thread
+import os
+
+web = Flask(__name__)
+
+@web.route("/")
+def home():
+    return "AniToon Bot Alive ✅"
+
+@web.route("/ping")
+def ping():
+    return "OK"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    web.run(host="0.0.0.0", port=port)
+
+Thread(target=run_web).start()
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -42,6 +60,19 @@ app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN
 
 user_data = {}
 control_data = {}
+def process_btn(uid):
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("⏸ Pause", callback_data=f"pause_{uid}"),
+            InlineKeyboardButton("▶️ Resume", callback_data=f"resume_{uid}")
+        ],
+        [
+            InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{uid}")
+        ],
+        [
+            InlineKeyboardButton("📢 AniToon's Channel", url="https://t.me/Anitoon_edit/33")
+        ]
+    ])
 
 # ---------------- CONTROL HELP ----------------
 def is_cancel(uid):
@@ -54,7 +85,11 @@ def is_pause(uid):
 async def progress(current, total, status, start):
     if total == 0:
         return
-
+        
+if control_data.get(uid) == "cancel":
+    await status.edit_text("❌ Cancelled")
+    return
+    
     if is_cancel(status.chat.id):
         return
 
@@ -119,6 +154,18 @@ async def start(_, message):
 async def cb(_, q):
     uid = q.from_user.id
 
+    if q.data.startswith("pause_"):
+        control_data[uid] = "pause"
+        await q.answer("Paused ⏸")
+
+    elif q.data.startswith("resume_"):
+        control_data[uid] = "run"
+        await q.answer("Resumed ▶️")
+
+    elif q.data.startswith("cancel_"):
+        control_data[uid] = "cancel"
+        await q.message.edit_text("❌ Cancelled")
+
     if q.data == "back":
         await q.message.edit_text("Main Menu", reply_markup=main_menu())
 
@@ -136,19 +183,6 @@ async def cb(_, q):
     elif q.data == "v2f":
         user_data[uid] = {"mode": "v2f"}
         await q.message.edit_text("Send video")
-
-    elif q.data == "pause_" + str(uid):
-        control_data[uid] = "pause"
-        await q.answer("Paused ⏸")
-
-    elif q.data == "resume_" + str(uid):
-        control_data[uid] = "run"
-        await q.answer("Resumed ▶️")
-
-    elif q.data == "cancel_" + str(uid):
-        control_data[uid] = "cancel"
-        await q.message.edit_text("❌ Cancelled")
-
 # ---------------- FILE ----------------
 @app.on_message(filters.document | filters.video | filters.audio)
 async def file_handler(_, msg):
