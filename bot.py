@@ -41,17 +41,21 @@ app = Client("AniToonBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN
 user_data = {}
 jobs = {}
 user_last_msg = {}
-
+last_msg = {}
+job_thumb_choice = {}
 # ---------------- CLEAN UI ----------------
-async def clean_old(uid, msg):
-    old = user_last_msg.get(uid)
+async def send_msg(uid, chat, text, reply_markup=None):
+    msg = await chat.reply_text(text, reply_markup=reply_markup)
+
     try:
+        old = last_msg.get(uid)
         if old:
             await old.delete()
     except:
         pass
-    user_last_msg[uid] = msg
 
+    last_msg[uid] = msg
+    return msg
 # ---------------- BUTTONS ----------------
 def main_menu(name="User"):
     return InlineKeyboardMarkup([
@@ -84,7 +88,14 @@ def thumb_buttons(job_id):
         [InlineKeyboardButton("❌ No Thumb", callback_data=f"thumb_none_{job_id}")],
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ])
-
+async def clean_old(uid, msg):
+    old = user_last_msg.get(uid)
+    if old:
+        try:
+            await old.delete()
+        except:
+            pass
+    user_last_msg[uid] = msg
 # ---------------- START ----------------
 @app.on_message(filters.command("start"))
 async def start(_, msg):
@@ -95,11 +106,10 @@ async def start(_, msg):
 
 📁 I am your **AniToon Rename & Convert Bot**
 
-I can help you:
 ⚡ Rename files instantly  
 🔄 Convert Video ↔ File  
-🖼 Manage thumbnails smartly  
-🚀 Fast processing system  
+🖼 Smart Thumbnail system  
+🚀 Fast processing engine  
 
 ✨ Click buttons below to continue
 🚀 Powered By: @AniToon_Edit
@@ -107,7 +117,6 @@ I can help you:
 
     m = await msg.reply_text(text, reply_markup=main_menu(name))
     await clean_old(msg.from_user.id, m)
-
 # ---------------- CALLBACK ----------------
 @app.on_callback_query()
 async def cb(_, q):
@@ -192,7 +201,7 @@ async def file_handler(_, msg):
     if state["mode"] == "rename":
         state["file"] = msg
         state["step"] = "name"
-        m = await msg.reply("✏️ Send new name (without extension)")
+        m = await msg.reply("✏️ Send new name (without extension)", reply_markup=back_btn())
         await clean_old(uid, m)
         return
 
@@ -242,9 +251,9 @@ async def text_handler(_, msg):
         }
 
         m = await msg.reply("⚙️ Processing rename...", reply_markup=job_buttons(job_id))
-        await clean_old(uid, m)
+    await clean_old(uid, m)
 
-        asyncio.create_task(process_job(job_id))
+    asyncio.create_task(process_job(job_id))
 
 # ---------------- JOB PROCESSOR ----------------
 async def process_job(job_id):
@@ -255,6 +264,37 @@ async def process_job(job_id):
 
     file_path = await msg.download()
 
+    async def progress(current, total, msg, start):
+    if total == 0:
+        return
+
+    job_id = msg.chat.id
+    job = jobs.get(job_id)
+
+    if not job:
+        return
+
+    if job["control"] == "cancel":
+        return
+
+    while job["control"] == "pause":
+        await asyncio.sleep(0.5)
+
+    percent = current * 100 / total
+
+    bar = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
+
+    text = f"""
+📦 Processing...
+
+[{bar}] {percent:.1f}%
+"""
+
+    try:
+        await msg.edit_text(text, reply_markup=job_buttons(job_id))
+    except:
+        pass
+        await clean_old(job["uid"], status)
     # ---------------- CONTROL ----------------
     while True:
         if job["control"] == "cancel":
