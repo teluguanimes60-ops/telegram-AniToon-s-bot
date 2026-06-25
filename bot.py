@@ -19,7 +19,7 @@ from auto_thumb import (
     FFMPEG_PATH
 )
 
-from tumbnail import (
+from thumbnail import (
     save_thumb,
     get_thumb
 )
