@@ -98,3 +98,38 @@ async def process_pipeline(job_id, msg, bot):
             pass
 
         remove_user(uid)
+        
+import traceback
+
+async def safe_run(job_id, msg, bot, handler):
+
+    try:
+        return await handler(job_id, msg, bot)
+
+    except Exception as e:
+
+        error_text = f"""
+❌ JOB FAILED
+
+Job ID: {job_id}
+
+Error:
+{str(e)}
+
+Trace:
+{traceback.format_exc()[:1000]}
+"""
+
+        try:
+            await msg.reply_text(error_text)
+        except:
+            pass
+
+    finally:
+        # ALWAYS CLEAN QUEUE
+        try:
+            from queue_system import remove_user
+            uid = msg.from_user.id
+            remove_user(uid)
+        except:
+            pass
