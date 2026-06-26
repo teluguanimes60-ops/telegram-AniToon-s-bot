@@ -151,7 +151,11 @@ async def text_handler(_, msg):
     user_state.pop(uid, None)
 
 # ---------------- START QUEUE SYSTEM ----------------
-start_queue()
+import asyncio
+from queue_system import start_queue
+
+loop = asyncio.get_event_loop()
+start_queue(loop)
 
 # ---------------- RUN ----------------
 app.run()
