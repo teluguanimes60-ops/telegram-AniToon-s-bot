@@ -1,86 +1,28 @@
-# ==========================================
-# AniToon Bot - PRODUCTION QUEUE ENGINE v4 FIXED
-# ==========================================
-
 import asyncio
-import time
-
-MAX_ACTIVE_USERS = 20
 
 active_users = set()
-waiting_queue = []
-user_last_seen = {}
+MAX_USERS = 20
 
-# ==========================================
-def add_user(uid: int) -> bool:
+def add_user(user_id):
+    if len(active_users) >= MAX_USERS:
+        return False
+    active_users.add(user_id)
+    return True
 
-    user_last_seen[uid] = time.time()
+def remove_user(user_id):
+    active_users.discard(user_id)
 
-    if uid in active_users:
-        return True
 
-    if len(active_users) < MAX_ACTIVE_USERS:
-        active_users.add(uid)
-        return True
+def start_queue(loop=None):
+    """
+    SAFE START: avoids 'no running event loop'
+    """
 
-    if uid not in waiting_queue:
-        waiting_queue.append(uid)
+    if loop is None:
+        loop = asyncio.get_event_loop()
 
-    return False
+    async def runner():
+        while True:
+            await asyncio.sleep(5)
 
-# ==========================================
-def remove_user(uid: int):
-    active_users.discard(uid)
-
-# ==========================================
-def get_position(uid: int) -> int:
-
-    if uid in active_users:
-        return 0
-
-    if uid in waiting_queue:
-        return waiting_queue.index(uid) + 1
-
-    return -1
-
-# ==========================================
-def cleanup(timeout: int = 600):
-
-    now = time.time()
-
-    for uid in waiting_queue[:]:
-        if now - user_last_seen.get(uid, 0) > timeout:
-            waiting_queue.remove(uid)
-
-# ==========================================
-async def process_queue():
-
-    while True:
-
-        try:
-
-            cleanup()
-
-            while waiting_queue and len(active_users) < MAX_ACTIVE_USERS:
-
-                uid = waiting_queue.pop(0)
-
-                if uid not in active_users:
-                    active_users.add(uid)
-
-        except Exception as e:
-            print("Queue error:", e)
-
-        await asyncio.sleep(2)
-
-# ==========================================
-# ✅ SAFE START FUNCTION (FIX)
-# ==========================================
-def start_queue():
-    import threading
-    import asyncio
-
-    def runner():
-        asyncio.run(process_queue())
-
-    threading.Thread(target=runner, daemon=True).start()
+    loop.create_task(runner())
