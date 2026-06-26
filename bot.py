@@ -359,111 +359,125 @@ async def progress(current, total, message, start_time):
         pass
 
 
-# ---------------- PROCESS JOB ----------------
 async def process_job(job_id):
 
-    job = jobs.get(job_id)
-    if not job:
-        return
+    async def task():
 
-    file_msg = job["file"]
-
-    status = await file_msg.reply_text(
-        "📥 Starting download...",
-        reply_markup=process_buttons(job_id)
-    )
-
-    start_time = time.time()
-
-    file_path = None
-
-    try:
-
-        # ---------------- DOWNLOAD ----------------
-        file_path = await file_msg.download(
-            progress=progress,
-            progress_args=(status, start_time)
-        )
-
-        # ---------------- CONTROL CHECK ----------------
-        if job.get("control") == "cancel":
-            await status.edit_text("❌ Cancelled")
+        job = jobs.get(job_id)
+        if not job:
             return
 
-        while job.get("control") == "pause":
-            await asyncio.sleep(1)
+        file_msg = job.get("file")
+        if not file_msg:
+            return
 
-        await status.edit_text("⚙️ Processing file...")
-
-        thumb = None
-
-        # ---------------- THUMBNAIL LOGIC FIX ----------------
-        if job.get("thumb_mode") == "saved":
-            thumb = get_thumb()
-
-        elif job.get("thumb_mode") == "auto":
-            thumb = generate_thumbnail(file_path)
-
-        elif job.get("thumb_mode") == "none":
-            thumb = None
-
-        # ---------------- RENAME ----------------
-        if job["mode"] == "rename":
-
-            ext = os.path.splitext(file_path)[1]
-            new_path = job["new_name"] + ext
-
-            os.rename(file_path, new_path)
-            file_path = new_path
-
-        # ---------------- CONVERT ----------------
-        elif job["mode"] == "convert" and job.get("convert_type") == "video":
-
-            output = file_path + "_conv.mp4"
-
-            subprocess.run([
-                "ffmpeg", "-y",
-                "-i", file_path,
-                "-c:v", "libx264",
-                "-preset", "ultrafast",
-                "-c:a", "aac",
-                output
-            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-            file_path = output
-
-        # ---------------- UPLOAD ----------------
-        await status.edit_text(
-            "📤 Uploading...",
+        status = await file_msg.reply_text(
+            "📥 Starting download...",
             reply_markup=process_buttons(job_id)
         )
 
-        caption = f"✅ {job.get('new_name','AniToon File')}"
+        file_path = None
 
-        # ---------------- SMART SEND FIX ----------------
-        if file_path.lower().endswith((".mp4", ".mkv", ".mov")):
+        try:
+            # ---------------- DOWNLOAD ----------------
+            file_path = await file_msg.download()
 
-            await file_msg.reply_video(
-                video=file_path,
-                thumb=thumb,
-                caption=caption,
-                supports_streaming=True
+            # ---------------- CANCEL CHECK ----------------
+            if job.get("control") == "cancel":
+                await status.edit_text("❌ Cancelled")
+                return
+
+            # ---------------- PAUSE CHECK ----------------
+            while job.get("control") == "pause":
+                await asyncio.sleep(1)
+
+            await status.edit_text("⚙️ Processing file...")
+
+            # ---------------- THUMBNAIL ----------------
+            thumb = None
+
+            if job.get("thumb_mode") == "saved":
+                thumb = get_thumb()
+
+            elif job.get("thumb_mode") == "auto":
+                try:
+                    thumb = generate_thumbnail(file_path)
+                except:
+                    thumb = None
+
+            elif job.get("thumb_mode") == "none":
+                thumb = None
+
+            # ---------------- RENAME MODE ----------------
+            if job.get("mode") == "rename":
+                ext = os.path.splitext(file_path)[1]
+                new_path = f"{job.get('new_name','file')}{ext}"
+
+                os.rename(file_path, new_path)
+                file_path = new_path
+
+            # ---------------- CONVERT MODE ----------------
+            elif job.get("mode") == "convert":
+                if job.get("convert_type") == "video":
+
+                    output = file_path + "_conv.mp4"
+
+                    subprocess.run(
+                        [
+                            "ffmpeg", "-y",
+                            "-i", file_path,
+                            "-c:v", "libx264",
+                            "-preset", "ultrafast",
+                            "-c:a", "aac",
+                            output
+                        ],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+
+                    file_path = output
+
+            # ---------------- UPLOAD ----------------
+            await status.edit_text(
+                "📤 Uploading file...",
+                reply_markup=process_buttons(job_id)
             )
 
-        else:
+            caption = f"✅ {job.get('new_name','AniToon File')}"
 
-            await file_msg.reply_document(
-                document=file_path,
-                thumb=thumb,
-                caption=caption
-            )
+            # ---------------- SMART SEND ----------------
+            if file_path.lower().endswith((".mp4", ".mkv", ".mov")):
 
-        await status.edit_text("✅ Completed Successfully")
+                await file_msg.reply_video(
+                    video=file_path,
+                    thumb=thumb,
+                    caption=caption,
+                    supports_streaming=True
+                )
 
-    except Exception as e:
-        await status.edit_text(f"❌ Error:\n{e}")
+            else:
 
-    finally:
+                await file_msg.reply_document(
+                    document=file_path,
+                    thumb=thumb,
+                    caption=caption
+                )
+
+            await status.edit_text("✅ Completed Successfully")
+
+        except Exception as e:
+            await status.edit_text(f"❌ Error:\n{e}")
+
+        finally:
+            try:
+                if file_path and os.path.exists(file_path):
+                    os.remove(file_path)
+            except:
+                pass
+
+            jobs.pop(job_id, None)
+
+    asyncio.create_task(task())
 
         # ---------------- CLEANUP SAFE ----------------
         try:
