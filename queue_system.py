@@ -1,5 +1,5 @@
 # ==========================================
-# AniToon Bot - PRODUCTION QUEUE ENGINE v4
+# AniToon Bot - PRODUCTION QUEUE ENGINE v4 FIXED
 # ==========================================
 
 import asyncio
@@ -9,45 +9,29 @@ MAX_ACTIVE_USERS = 20
 
 active_users = set()
 waiting_queue = []
-
 user_last_seen = {}
 
 # ==========================================
-# 👤 ADD USER TO SYSTEM
-# ==========================================
 def add_user(uid: int) -> bool:
-    """
-    Returns True if user can process immediately
-    Returns False if user is queued
-    """
 
     user_last_seen[uid] = time.time()
 
-    # already active
     if uid in active_users:
         return True
 
-    # space available
     if len(active_users) < MAX_ACTIVE_USERS:
         active_users.add(uid)
         return True
 
-    # already in queue
     if uid not in waiting_queue:
         waiting_queue.append(uid)
 
     return False
 
 # ==========================================
-# ❌ REMOVE USER FROM ACTIVE
-# ==========================================
 def remove_user(uid: int):
+    active_users.discard(uid)
 
-    if uid in active_users:
-        active_users.remove(uid)
-
-# ==========================================
-# 📊 GET QUEUE POSITION
 # ==========================================
 def get_position(uid: int) -> int:
 
@@ -60,25 +44,21 @@ def get_position(uid: int) -> int:
     return -1
 
 # ==========================================
-# 🧠 CLEAN DEAD USERS
-# ==========================================
 def cleanup(timeout: int = 600):
 
     now = time.time()
 
-    # remove inactive users from queue
     for uid in waiting_queue[:]:
         if now - user_last_seen.get(uid, 0) > timeout:
             waiting_queue.remove(uid)
 
-# ==========================================
-# 🚀 PROMOTE QUEUE USERS
 # ==========================================
 async def process_queue():
 
     while True:
 
         try:
+
             cleanup()
 
             while waiting_queue and len(active_users) < MAX_ACTIVE_USERS:
@@ -88,14 +68,23 @@ async def process_queue():
                 if uid not in active_users:
                     active_users.add(uid)
 
-        except:
-            pass
+        except Exception as e:
+            print("Queue error:", e)
 
         await asyncio.sleep(2)
 
 # ==========================================
-# ▶ START QUEUE WORKER
+# ✅ SAFE START FUNCTION (FIX)
 # ==========================================
-def start_queue():
+def start_queue(app):
 
-    asyncio.create_task(process_queue())
+    async def runner():
+        await process_queue()
+
+    # attach to running loop safely
+    import threading
+
+    def run():
+        asyncio.run(runner())
+
+    threading.Thread(target=run, daemon=True).start()
