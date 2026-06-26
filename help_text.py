@@ -1,51 +1,97 @@
-# ===========================
-# AniToon Bot - HELP TEXT (CLEAN UI)
-# ===========================
+# ==========================================
+# 📚 AniToon Bot - Help Text
+# ==========================================
 
 HELP_TEXT = """
-🆘 <b>AniToon Bot Help Guide</b>
+🎉 <b>Welcome to AniToon File Bot</b>
 
-━━━━━━━━━━━━━━
+This bot can rename, convert and manage your Telegram files easily.
 
-📁 <b>Rename File</b>
-• Send file/video
-• Enter new name
-• Bot renames instantly
+━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━
+📂 <b>Rename</b>
+• Change file names
+• Keep original extension
+• Supports all file types
 
-🔄 <b>Convert File</b>
-• Video ➜ MP4
-• File ➜ Document
-• Select output type after upload
+━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━
+🎬 <b>Convert</b>
 
-⚡ <b>Instant Edit</b>
-• Reply to file/video
-• Send new name
-• No processing delay
+📹 Video → Document
+📄 Document → Video
+🎵 Extract Audio (MP3)
+🖼 Generate Video Thumbnail
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-🖼 <b>Thumbnail System</b>
-• Saved Thumbnail
-• Auto Thumbnail (from video)
-• No Thumbnail option
+📝 <b>Instant Caption</b>
 
-━━━━━━━━━━━━━━
+Edit the caption instantly without downloading the file again.
 
-⏸ <b>Controls</b>
-• Pause task
-• Resume task
-• Cancel task anytime
+━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━
+🖼 <b>Thumbnail</b>
 
-📢 <b>Channel</b>
-@Anitoon_Edit
+🤖 Auto Thumbnail
+• Generated automatically from the video.
 
-━━━━━━━━━━━━━━
+🖼 Custom Thumbnail
+• Upload your own thumbnail.
 
+(Thumbnail options appear only when you choose Rename or Convert.)
+
+━━━━━━━━━━━━━━━━━━
+
+📊 <b>Progress</b>
+
+During processing you'll see:
+
+⬇ Download Progress
+⬆ Upload Progress
+📈 Speed
+📦 Size
+⏳ ETA
+📊 Percentage
+
+━━━━━━━━━━━━━━━━━━
+
+⚙ <b>Queue System</b>
+
+• Supports up to 20 active users.
+• If full, you'll be asked to wait until a slot is available.
+
+━━━━━━━━━━━━━━━━━━
+
+🧹 <b>Auto Cleanup</b>
+
+Old bot messages are removed automatically to keep your chat clean.
+
+━━━━━━━━━━━━━━━━━━
+
+❓ <b>Commands</b>
+
+/start - Start the bot
+/help - Show this help
+/settings - User settings
+/cancel - Cancel current job
+
+━━━━━━━━━━━━━━━━━━
+
+💡 <b>Tips</b>
+
+✅ Send any file.
+
+Choose:
+
+✏ Rename
+🎬 Convert
+📝 Instant Caption
+
+Then follow the on-screen instructions.
+
+━━━━━━━━━━━━━━━━━━
+
+❤️ Thank you for using AniToon Bot!
 🚀 <b>Powered By AniToon Bot</b>
 """
