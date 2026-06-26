@@ -1,75 +1,121 @@
 # ==========================================
-# AniToon Bot - THUMBNAIL SYSTEM (MONGO V4)
+# AniToon Bot - THUMBNAIL SYSTEM (PRODUCTION)
 # ==========================================
 
 import os
-from db import save_thumbnail, get_thumbnail as db_get_thumb
+import subprocess
+
+from db import (
+    save_thumbnail,
+    get_thumbnail as db_get_thumbnail
+)
 
 # ==========================================
-# 🖼 SAVE THUMBNAIL
+# SAVE USER THUMBNAIL
 # ==========================================
 async def save_thumb(user_id: int, file_id: str):
-    """
-    Save thumbnail permanently in MongoDB
-    """
     await save_thumbnail(user_id, file_id)
 
+
 # ==========================================
-# 📥 GET THUMBNAIL (MAIN FUNCTION)
+# GET THUMBNAIL
 # ==========================================
-async def get_thumb(user_id: int = None, mode: str = "saved", auto_path: str = None):
-    """
-    Returns thumbnail based on mode:
-    - saved → MongoDB thumbnail
-    - auto → generate from video
-    - none → None
-    """
+async def get_thumb(
+    user_id=None,
+    mode="auto",
+    auto_path=None
+):
 
     try:
 
-        # ❌ no thumbnail
+        # ---------------- NONE ----------------
         if mode == "none":
             return None
 
-        # 📌 saved thumbnail from DB
-        if mode == "saved" and user_id is not None:
-            return await db_get_thumb(user_id)
+        # ---------------- SAVED ----------------
+        if mode == "saved":
 
-        # ⚡ auto thumbnail from file
-        if mode == "auto" and auto_path:
+            if not user_id:
+                return None
 
-            return _generate_local_thumb(auto_path)
+            thumb = await db_get_thumbnail(user_id)
+
+            if thumb and os.path.exists(thumb):
+                return thumb
+
+            return None
+
+        # ---------------- AUTO ----------------
+        if mode == "auto":
+
+            if auto_path is None:
+                return None
+
+            return generate_auto_thumb(auto_path)
 
         return None
 
-    except:
+    except Exception as e:
+        print("Thumbnail Error:", e)
         return None
 
+
 # ==========================================
-# ⚡ AUTO THUMBNAIL GENERATOR (FFMPEG)
+# AUTO THUMBNAIL
 # ==========================================
-def _generate_local_thumb(video_path: str):
+def generate_auto_thumb(video_path):
+
+    if not os.path.exists(video_path):
+        return None
+
+    thumb = video_path + "_thumb.jpg"
+
+    if os.path.exists(thumb):
+        try:
+            os.remove(thumb)
+        except:
+            pass
+
+    cmd = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-ss",
+        "00:00:01",
+        "-i",
+        video_path,
+        "-frames:v",
+        "1",
+        thumb,
+    ]
 
     try:
-        import subprocess
 
-        thumb_path = f"{video_path}_thumb.jpg"
+        subprocess.run(
+            cmd,
+            check=True
+        )
 
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-i", video_path,
-            "-ss", "00:00:01",
-            "-vframes", "1",
-            thumb_path
-        ]
+        if os.path.exists(thumb):
+            return thumb
 
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print("FFmpeg Thumbnail Error:", e)
 
-        if os.path.exists(thumb_path):
-            return thumb_path
+    return None
+
+
+# ==========================================
+# CLEAN GENERATED THUMBNAIL
+# ==========================================
+def delete_auto_thumb(path):
+
+    try:
+
+        if path and os.path.exists(path):
+            os.remove(path)
 
     except:
         pass
-
-    return None
