@@ -1,4 +1,6 @@
-# thumbnail.py (PRO LEVEL FIXED)
+# ==========================================
+# AniToon Bot - PRO THUMBNAIL SYSTEM
+# ==========================================
 
 import os
 
@@ -6,20 +8,19 @@ THUMB_FILE = "saved_thumbnail.jpg"
 
 
 # ---------------- SAVE THUMBNAIL ----------------
-
 def save_thumb(path):
     """
-    Save user thumbnail safely
+    Save user thumbnail (replace old one safely)
     """
 
     try:
-        if not path:
-            return False
-
+        # delete old thumbnail if exists
         if os.path.exists(THUMB_FILE):
             os.remove(THUMB_FILE)
 
+        # move new thumbnail
         os.rename(path, THUMB_FILE)
+
         return True
 
     except Exception:
@@ -27,22 +28,18 @@ def save_thumb(path):
 
 
 # ---------------- GET SAVED THUMB ----------------
-
 def get_thumb():
     """
     Return saved thumbnail if exists
     """
 
-    try:
-        if os.path.exists(THUMB_FILE):
-            return THUMB_FILE
-        return None
-    except:
-        return None
+    if os.path.exists(THUMB_FILE):
+        return THUMB_FILE
+
+    return None
 
 
 # ---------------- DELETE THUMB ----------------
-
 def delete_thumb():
     """
     Remove saved thumbnail
@@ -57,45 +54,33 @@ def delete_thumb():
 
 
 # ---------------- VALIDATE THUMB ----------------
-
-def is_valid_thumb():
+def is_thumb_available():
     """
     Check if thumbnail exists and is usable
     """
 
-    try:
-        return os.path.exists(THUMB_FILE) and os.path.getsize(THUMB_FILE) > 0
-    except:
-        return False
+    return os.path.exists(THUMB_FILE)
 
 
-# ---------------- AUTO FALLBACK ----------------
-
-def get_best_thumb(auto_thumb_func=None, video_path=None, mode="none"):
+# ---------------- SAFE THUMB SELECTOR ----------------
+def get_safe_thumb(mode, auto_thumb_func=None, video_path=None):
     """
-    SMART thumbnail system (PRO LEVEL)
+    Unified thumbnail system:
 
     mode:
-    - saved
-    - auto
-    - none
+    - saved → uses saved thumbnail
+    - auto → generates from video
+    - none → no thumbnail
     """
 
-    try:
+    if mode == "saved":
+        return get_thumb()
 
-        # 1. Saved thumbnail (highest priority)
-        if mode == "saved":
-            if is_valid_thumb():
-                return THUMB_FILE
+    elif mode == "auto":
+        try:
+            if auto_thumb_func and video_path:
+                return auto_thumb_func(video_path)
+        except:
+            return None
 
-        # 2. Auto thumbnail from video
-        if mode == "auto" and video_path and auto_thumb_func:
-            thumb = auto_thumb_func(video_path)
-            if thumb and os.path.exists(thumb):
-                return thumb
-
-        # 3. No thumbnail
-        return None
-
-    except:
-        return None
+    return None
