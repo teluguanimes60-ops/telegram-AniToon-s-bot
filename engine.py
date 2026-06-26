@@ -61,7 +61,9 @@ async def process_pipeline(job_id, msg, bot):
     try:
 
         # ---------------- QUEUE ----------------
-        add_user(uid)
+        if not add_user(uid):
+        await msg.reply_text("⛔ 20 users are processing. Please wait...")
+        return
 
         # ---------------- DOWNLOAD ----------------
         start = time.time()
