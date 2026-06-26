@@ -1,30 +1,57 @@
+# ==========================================
+# AniToon Bot - PROGRESS BAR (FIXED)
+# ==========================================
+
 import time
 
-def progress(current, total, message, start):
+# ---------------- FORMAT SIZE ----------------
+def human_bytes(size):
+    if not size:
+        return "0B"
+
+    power = 1024
+    n = 0
+    units = ["B", "KB", "MB", "GB", "TB"]
+
+    while size >= power and n < len(units) - 1:
+        size /= power
+        n += 1
+
+    return f"{round(size, 2)} {units[n]}"
+
+
+# ---------------- PROGRESS CALLBACK ----------------
+async def progress(current, total, message, start):
 
     try:
-        percent = (current / total) * 100 if total else 0
-        elapsed = time.time() - start
-        speed = current / elapsed if elapsed > 0 else 0
+        now = time.time()
+        diff = now - start
 
-        bar_len = 10
+        if diff == 0:
+            diff = 0.1
+
+        speed = current / diff
+        percent = (current * 100) / total
+
+        # ETA
+        eta = (total - current) / speed if speed > 0 else 0
+
+        # BAR
         filled = int(percent / 10)
-
-        bar = "█" * filled + "░" * (bar_len - filled)
+        bar = "█" * filled + "░" * (10 - filled)
 
         text = f"""
-📦 Uploading...
+📥 **Processing File**
 
-[{bar}] {percent:.1f}%
+[{bar}] {round(percent, 2)}%
 
-⚡ Speed: {speed/1024/1024:.2f} MB/s
-📊 {current/1024/1024:.1f}MB / {total/1024/1024:.1f}MB
+📦 {human_bytes(current)} / {human_bytes(total)}
+⚡ Speed: {human_bytes(speed)}/s
+⏳ ETA: {int(eta)} sec
 """
 
-        try:
-            message.edit_text(text)
-        except:
-            pass
+        # EDIT MESSAGE SAFELY
+        await message.edit_text(text)
 
-    except:
+    except Exception:
         pass
