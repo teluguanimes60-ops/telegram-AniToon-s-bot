@@ -1,48 +1,41 @@
-# ===========================
-# AniToon Bot - FFMPEG CONFIG
-# ===========================
+# ffmpeg.py (STABLE PRO VERSION)
 
 import os
 import shutil
+import subprocess
 
-# default fallback path
 FFMPEG_PATH = None
 
 
-# ===========================
-# INIT FFMPEG PATH
-# ===========================
-def init_ffmpeg():
+def find_ffmpeg():
     """
-    Detect ffmpeg automatically in system.
-    Works for Linux / Windows / Render / VPS
+    Auto detect ffmpeg path for Render / Linux / local
     """
 
     global FFMPEG_PATH
 
-    # try system ffmpeg
-    path = shutil.which("ffmpeg")
-
-    if path:
-        FFMPEG_PATH = path
-    else:
-        # fallback (assume installed in PATH)
+    # Try system ffmpeg
+    if shutil.which("ffmpeg"):
         FFMPEG_PATH = "ffmpeg"
+        return FFMPEG_PATH
 
+    # Common Render / Linux paths
+    possible_paths = [
+        "/usr/bin/ffmpeg",
+        "/usr/local/bin/ffmpeg"
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            FFMPEG_PATH = path
+            return FFMPEG_PATH
+
+    # fallback (will still try system)
+    FFMPEG_PATH = "ffmpeg"
     return FFMPEG_PATH
 
 
-# ===========================
-# GET FFMPEG PATH
-# ===========================
 def get_ffmpeg():
-    """
-    Return safe ffmpeg path
-    """
-
-    global FFMPEG_PATH
-
     if not FFMPEG_PATH:
-        init_ffmpeg()
-
+        find_ffmpeg()
     return FFMPEG_PATH
