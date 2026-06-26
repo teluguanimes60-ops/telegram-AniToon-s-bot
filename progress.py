@@ -1,20 +1,30 @@
 import time
 
-last_update = {}
-
-async def progress(current, total, message, start):
-
-    uid = message.chat.id
-    now = time.time()
-
-    # anti-spam update (important fix)
-    if uid in last_update and now - last_update[uid] < 2:
-        return
-
-    last_update[uid] = now
+def progress(current, total, message, start):
 
     try:
         percent = (current / total) * 100 if total else 0
-        speed = current / (now - start + 0.1)
+        elapsed = time.time() - start
+        speed = current / elapsed if elapsed > 0 else 0
 
-        bar = "█" * int(percent / 10) + "░" * (10 - int(percent / 
+        bar_len = 10
+        filled = int(percent / 10)
+
+        bar = "█" * filled + "░" * (bar_len - filled)
+
+        text = f"""
+📦 Uploading...
+
+[{bar}] {percent:.1f}%
+
+⚡ Speed: {speed/1024/1024:.2f} MB/s
+📊 {current/1024/1024:.1f}MB / {total/1024/1024:.1f}MB
+"""
+
+        try:
+            message.edit_text(text)
+        except:
+            pass
+
+    except:
+        pass
