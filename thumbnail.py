@@ -1,23 +1,21 @@
-# ==========================
-# AniToon Bot - PRO THUMBNAIL SYSTEM
-# CLEAN + SAFE + STABLE
-# ==========================
+# thumbnail.py (PRO LEVEL FIXED)
 
 import os
-import subprocess
 
 THUMB_FILE = "saved_thumbnail.jpg"
-
-FFMPEG = "ffmpeg"
 
 
 # ---------------- SAVE THUMBNAIL ----------------
 
 def save_thumb(path):
     """
-    Save user thumbnail permanently
+    Save user thumbnail safely
     """
+
     try:
+        if not path:
+            return False
+
         if os.path.exists(THUMB_FILE):
             os.remove(THUMB_FILE)
 
@@ -34,54 +32,48 @@ def get_thumb():
     """
     Return saved thumbnail if exists
     """
-    if os.path.exists(THUMB_FILE):
-        return THUMB_FILE
-    return None
+
+    try:
+        if os.path.exists(THUMB_FILE):
+            return THUMB_FILE
+        return None
+    except:
+        return None
 
 
-# ---------------- AUTO THUMB (FROM VIDEO) ----------------
+# ---------------- DELETE THUMB ----------------
 
-def generate_thumbnail(video_path):
+def delete_thumb():
     """
-    Generate thumbnail from video using ffmpeg
+    Remove saved thumbnail
     """
 
     try:
-        if not video_path or not os.path.exists(video_path):
-            return None
-
-        thumb_path = f"thumb_{os.path.basename(video_path)}.jpg"
-
-        cmd = [
-            FFMPEG,
-            "-y",
-            "-ss", "00:00:02",
-            "-i", video_path,
-            "-frames:v", "1",
-            "-q:v", "2",
-            thumb_path
-        ]
-
-        subprocess.run(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-
-        if os.path.exists(thumb_path):
-            return thumb_path
-
-        return None
-
-    except Exception:
-        return None
+        if os.path.exists(THUMB_FILE):
+            os.remove(THUMB_FILE)
+        return True
+    except:
+        return False
 
 
-# ---------------- GET FINAL THUMBNAIL ----------------
+# ---------------- VALIDATE THUMB ----------------
 
-def get_final_thumbnail(mode, video_path=None):
+def is_valid_thumb():
     """
-    Smart thumbnail selector:
+    Check if thumbnail exists and is usable
+    """
+
+    try:
+        return os.path.exists(THUMB_FILE) and os.path.getsize(THUMB_FILE) > 0
+    except:
+        return False
+
+
+# ---------------- AUTO FALLBACK ----------------
+
+def get_best_thumb(auto_thumb_func=None, video_path=None, mode="none"):
+    """
+    SMART thumbnail system (PRO LEVEL)
 
     mode:
     - saved
@@ -91,14 +83,19 @@ def get_final_thumbnail(mode, video_path=None):
 
     try:
 
+        # 1. Saved thumbnail (highest priority)
         if mode == "saved":
-            return get_thumb()
+            if is_valid_thumb():
+                return THUMB_FILE
 
-        elif mode == "auto":
-            return generate_thumbnail(video_path)
+        # 2. Auto thumbnail from video
+        if mode == "auto" and video_path and auto_thumb_func:
+            thumb = auto_thumb_func(video_path)
+            if thumb and os.path.exists(thumb):
+                return thumb
 
-        else:
-            return None
+        # 3. No thumbnail
+        return None
 
     except:
         return None
