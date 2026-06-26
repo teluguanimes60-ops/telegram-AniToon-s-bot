@@ -1,57 +1,77 @@
-# ===========================
-# AniToon Bot V3 - Progress FIX
-# DOWNLOAD + UPLOAD PROGRESS
-# ===========================
+# ==========================
+# AniToon Bot - PRO PROGRESS SYSTEM
+# CLEAN + STABLE + NO SPAM
+# ==========================
 
 import time
+import asyncio
 
-last_update = {}
+# store last update time to avoid spam edits
+_last_update = {}
 
+# ---------------- PROGRESS BAR ----------------
+
+def build_bar(percent):
+    filled = int(percent / 5)
+    empty = 20 - filled
+    return "█" * filled + "░" * empty
+
+
+# ---------------- FORMAT SPEED ----------------
 
 def format_speed(speed):
     if speed > 1024 * 1024:
-        return f"{speed / 1024 / 1024:.2f} MB/s"
+        return f"{speed / (1024 * 1024):.2f} MB/s"
     elif speed > 1024:
         return f"{speed / 1024:.2f} KB/s"
-    return f"{speed:.0f} B/s"
+    else:
+        return f"{speed:.0f} B/s"
 
+
+# ---------------- MAIN PROGRESS ----------------
 
 async def progress(current, total, message, start_time):
 
     try:
         now = time.time()
 
-        if message.id in last_update:
-            if now - last_update[message.id] < 1:
+        # anti spam (update every 2 sec)
+        if message.id in _last_update:
+            if now - _last_update[message.id] < 2:
                 return
 
-        last_update[message.id] = now
+        _last_update[message.id] = now
 
         if total == 0:
             return
 
-        percent = current * 100 / total
+        percent = (current / total) * 100
 
         elapsed = now - start_time
-        speed = current / (elapsed + 1)
+        if elapsed <= 0:
+            elapsed = 1
+
+        speed = current / elapsed
 
         eta = (total - current) / (speed + 1)
 
-        filled = int(percent / 5)
-        bar = "█" * filled + "░" * (20 - filled)
+        bar = build_bar(percent)
 
         text = (
             "📥 **Processing File**\n\n"
             f"`[{bar}]`\n\n"
-            f"📊 **{percent:.1f}%**\n\n"
+            f"📊 **Progress:** {percent:.2f}%\n\n"
             f"⚡ **Speed:** {format_speed(speed)}\n"
-            f"📦 **Done:** {current/1024/1024:.2f} MB\n"
-            f"💾 **Total:** {total/1024/1024:.2f} MB\n"
-            f"⏳ **ETA:** {int(eta)} sec"
+            f"📦 **Downloaded:** {current / (1024*1024):.2f} MB\n"
+            f"💾 **Total:** {total / (1024*1024):.2f} MB\n"
+            f"⏳ **ETA:** {int(eta)} sec\n"
         )
 
         try:
-            await message.edit_text(text, reply_markup=message.reply_markup)
+            await message.edit_text(
+                text,
+                reply_markup=message.reply_markup
+            )
         except:
             pass
 
