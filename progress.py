@@ -1,66 +1,67 @@
-# progress.py
-
 import time
 
-last_update = {}
+# store last update time to avoid spam edits
+last_update_time = {}
 
 
 async def progress(current, total, message, start_time):
     """
-    Progress bar for Download & Upload
+    Clean progress bar for download/upload
     """
 
-    now = time.time()
+    try:
+        now = time.time()
 
-    if message.id in last_update:
-        if now - last_update[message.id] < 2:
+        # avoid editing too fast (Telegram flood control fix)
+        if message.id in last_update_time:
+            if now - last_update_time[message.id] < 1.5:
+                return
+
+        last_update_time[message.id] = now
+
+        if total == 0:
             return
 
-    last_update[message.id] = now
+        # percentage
+        percent = (current / total) * 100
 
-    if total == 0:
-        return
+        # time & speed
+        elapsed = now - start_time
+        if elapsed <= 0:
+            elapsed = 1
 
-    percentage = current * 100 / total
+        speed = current / elapsed
 
-    filled = int(percentage / 5)
-    empty = 20 - filled
+        # ETA
+        eta = int((total - current) / (speed + 1))
 
-    bar = "█" * filled + "░" * empty
+        # MB conversion
+        current_mb = current / (1024 * 1024)
+        total_mb = total / (1024 * 1024)
+        speed_mb = speed / (1024 * 1024)
 
-    elapsed = now - start_time
+        # progress bar
+        filled = int(percent / 5)
+        bar = "█" * filled + "░" * (20 - filled)
 
-    if elapsed <= 0:
-        elapsed = 1
-
-    speed = current / elapsed
-
-    if speed > 1024 * 1024:
-        speed_text = f"{speed / 1024 / 1024:.2f} MB/s"
-    elif speed > 1024:
-        speed_text = f"{speed / 1024:.2f} KB/s"
-    else:
-        speed_text = f"{speed:.0f} B/s"
-
-    eta = 0
-
-    if speed > 0:
-        eta = int((total - current) / speed)
-
-    text = (
-        "📥 **Processing File**\n\n"
-        f"`[{bar}]`\n\n"
-        f"**{percentage:.1f}%**\n\n"
-        f"⚡ **Speed:** {speed_text}\n"
-        f"📦 **Done:** {current/1024/1024:.2f} MB\n"
-        f"💾 **Total:** {total/1024/1024:.2f} MB\n"
-        f"⏳ **ETA:** {eta} sec"
-    )
-
-    try:
-        await message.edit_text(
-            text,
-            reply_markup=message.reply_markup
+        text = (
+            "📥 <b>Downloading...</b>\n\n"
+            f"[{bar}]\n\n"
+            f"📊 <b>{percent:.1f}%</b>\n\n"
+            f"⚡ <b>Speed:</b> {speed_mb:.2f} MB/s\n"
+            f"📦 <b>Done:</b> {current_mb:.2f} MB\n"
+            f"💾 <b>Total:</b> {total_mb:.2f} MB\n"
+            f"⏳ <b>ETA:</b> {eta} sec"
         )
+
+        try:
+            await message.edit_text(
+                text,
+                reply_markup=message.reply_markup,
+                parse_mode="html"
+            )
+        except:
+            pass
+
     except:
         pass
