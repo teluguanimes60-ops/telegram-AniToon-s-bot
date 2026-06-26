@@ -14,7 +14,8 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from auto_thumb import setup_ffmpeg
-
+from thumbnail import get_thumb
+from auto_thumb import generate_thumbnail
 # ---------------- ENV SAFETY ----------------
 API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
