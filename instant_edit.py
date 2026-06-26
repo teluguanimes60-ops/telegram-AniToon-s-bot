@@ -1,51 +1,86 @@
-# ==========================================
-# AniToon Bot - Instant Caption Editor
-# ==========================================
+# ==========================================================
+# 🤖 AniToon's Bot - Instant Edit System
+# ==========================================================
 
-from jobs import update_job
+import time
 
-# Stores message IDs that can be edited later
+# ----------------------------------------------------------
+# Stores the last uploaded media message for each user
+# ----------------------------------------------------------
+
 EDIT_CACHE = {}
 
+CACHE_EXPIRE = 60 * 60   # 1 hour
+
+
+# ----------------------------------------------------------
+# Save uploaded media
+# ----------------------------------------------------------
 
 def save_editable_message(user_id, message):
-    """
-    Save the sent media message for later caption editing.
-    """
+
     EDIT_CACHE[user_id] = {
         "chat_id": message.chat.id,
         "message_id": message.id,
+        "time": time.time()
     }
 
 
-def get_editable_message(user_id):
-    """
-    Get saved message info.
-    """
-    return EDIT_CACHE.get(user_id)
+# ----------------------------------------------------------
+# Get uploaded media
+# ----------------------------------------------------------
 
+def get_editable_message(user_id):
+
+    data = EDIT_CACHE.get(user_id)
+
+    if not data:
+        return None
+
+    if time.time() - data["time"] > CACHE_EXPIRE:
+
+        EDIT_CACHE.pop(user_id, None)
+        return None
+
+    return data
+
+
+# ----------------------------------------------------------
+# Remove cache
+# ----------------------------------------------------------
+
+def clear_editable_message(user_id):
+
+    EDIT_CACHE.pop(user_id, None)
+
+
+# ----------------------------------------------------------
+# Instant Caption Edit
+# ----------------------------------------------------------
 
 async def instant_edit_caption(client, user_id, new_caption):
-    """
-    Instantly edit the caption of the last uploaded media.
-    """
 
     data = get_editable_message(user_id)
 
-    if not data:
-        return False
+    if data is None:
+        return False, "❌ No recently uploaded file found."
 
     try:
+
+        caption = (new_caption or "").strip()
+
+        if len(caption) > 1024:
+            caption = caption[:1024]
+
         await client.edit_message_caption(
             chat_id=data["chat_id"],
             message_id=data["message_id"],
-            caption=new_caption
+            caption=caption
         )
 
-        update_job(str(data["message_id"]), "caption", new_caption)
-
-        return True
+        return True, "✅ Caption updated."
 
     except Exception as e:
+
         print("Instant Edit Error:", e)
-        return False
+        return False, "❌ Unable to edit caption."
