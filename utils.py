@@ -1,41 +1,16 @@
-# ==========================
-# AniToon Bot - PRO UTILS SYSTEM
-# CLEAN + SAFE + STABLE CORE
-# ==========================
+# utils.py (PRO FIXED VERSION)
 
 import os
 import shutil
 import subprocess
 
-from thumbnail import get_thumb, generate_thumbnail
+from thumbnail import get_thumb
+from auto_thumb import generate_thumbnail
 
 
-# ---------------- FILE TYPE DETECTION ----------------
-
-def get_file_type(message):
-    """
-    Detect file type from Telegram message
-    """
-
-    if message.video:
-        return "video"
-
-    if message.document:
-        return "document"
-
-    if message.audio:
-        return "audio"
-
-    return "unknown"
-
-
-# ---------------- FILE NAME ----------------
+# ---------------- FILE INFO ----------------
 
 def get_file_name(message):
-    """
-    Get original file name safely
-    """
-
     if message.document:
         return message.document.file_name
 
@@ -48,23 +23,18 @@ def get_file_name(message):
     return "file"
 
 
-# ---------------- EXTENSION ----------------
-
 def get_extension(filename):
     return os.path.splitext(filename)[1]
 
 
-# ---------------- SAFE RENAME ----------------
+# ---------------- RENAME ----------------
 
-def build_new_name(old_name, new_name):
+def make_new_name(old_name, new_name):
     """
-    Prevent double extension bugs
+    Safe rename with extension handling
     """
 
     ext = get_extension(old_name)
-
-    if not new_name:
-        return old_name
 
     if "." in new_name:
         return new_name
@@ -72,13 +42,10 @@ def build_new_name(old_name, new_name):
     return new_name + ext
 
 
-# ---------------- RENAME FILE ----------------
-
 def rename_file(old_path, new_path):
     """
-    Safe file rename/move
+    Safe file rename
     """
-
     try:
         shutil.move(old_path, new_path)
         return new_path
@@ -86,16 +53,38 @@ def rename_file(old_path, new_path):
         return old_path
 
 
-# ---------------- CONVERT TO MP4 ----------------
+# ---------------- THUMBNAIL ----------------
 
-def convert_to_mp4(input_file):
+def get_thumbnail(file_path, mode):
     """
-    Convert any video to mp4 using ffmpeg
+    mode:
+    - saved
+    - auto
+    - none
     """
 
     try:
-        output = os.path.splitext(input_file)[0] + ".mp4"
+        if mode == "saved":
+            return get_thumb()
 
+        if mode == "auto":
+            return generate_thumbnail(file_path)
+
+        return None
+    except:
+        return None
+
+
+# ---------------- CONVERT ----------------
+
+def convert_to_mp4(input_file):
+    """
+    Safe ffmpeg conversion
+    """
+
+    output = os.path.splitext(input_file)[0] + "_converted.mp4"
+
+    try:
         cmd = [
             "ffmpeg",
             "-y",
@@ -110,68 +99,38 @@ def convert_to_mp4(input_file):
             output
         ]
 
-        subprocess.run(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         if os.path.exists(output):
             return output
 
         return input_file
 
-    except Exception:
+    except:
         return input_file
 
 
-# ---------------- SMART THUMBNAIL ----------------
+# ---------------- FILE SIZE ----------------
 
-def get_thumbnail(video_path, mode):
-    """
-    Unified thumbnail system
-    """
+def human_size(size):
 
-    try:
+    power = 1024
+    n = 0
+    units = ["B", "KB", "MB", "GB", "TB"]
 
-        if mode == "saved":
-            return get_thumb()
+    while size > power and n < len(units) - 1:
+        size /= power
+        n += 1
 
-        if mode == "auto":
-            return generate_thumbnail(video_path)
-
-        return None
-
-    except:
-        return None
+    return f"{size:.2f} {units[n]}"
 
 
 # ---------------- SAFE DELETE ----------------
 
 def safe_delete(path):
-    """
-    Delete files safely
-    """
 
     try:
         if path and os.path.exists(path):
             os.remove(path)
     except:
         pass
-
-
-# ---------------- HUMAN SIZE ----------------
-
-def human_size(size):
-    """
-    Convert bytes to readable format
-    """
-
-    units = ["B", "KB", "MB", "GB", "TB"]
-    i = 0
-
-    while size >= 1024 and i < len(units) - 1:
-        size /= 1024
-        i += 1
-
-    return f"{size:.2f} {units[i]}"
