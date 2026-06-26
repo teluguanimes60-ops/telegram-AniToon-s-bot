@@ -1,97 +1,140 @@
-# ==========================================
-# 📚 AniToon Bot - Help Text
-# ==========================================
+# ==========================================================
+# 🤖 AniToon's Rename & Convert Bot
+# Help Text
+# ==========================================================
 
 HELP_TEXT = """
-🎉 <b>Welcome to AniToon File Bot</b>
+<b>🤖 Welcome to AniToon's Rename & Convert Bot</b>
 
-This bot can rename, convert and manage your Telegram files easily.
+━━━━━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━━━━━
+<b>✨ Features</b>
 
-📂 <b>Rename</b>
-• Change file names
-• Keep original extension
-• Supports all file types
+✏️ Rename Files
 
-━━━━━━━━━━━━━━━━━━
+🎬 Convert Videos
 
-🎬 <b>Convert</b>
-
-📹 Video → Document
-📄 Document → Video
-🎵 Extract Audio (MP3)
-🖼 Generate Video Thumbnail
-
-━━━━━━━━━━━━━━━━━━
-
-📝 <b>Instant Caption</b>
-
-Edit the caption instantly without downloading the file again.
-
-━━━━━━━━━━━━━━━━━━
-
-🖼 <b>Thumbnail</b>
-
-🤖 Auto Thumbnail
-• Generated automatically from the video.
+📝 Instant Caption Edit
 
 🖼 Custom Thumbnail
-• Upload your own thumbnail.
 
-(Thumbnail options appear only when you choose Rename or Convert.)
+🤖 Auto Thumbnail
 
-━━━━━━━━━━━━━━━━━━
+📊 Live Progress Bar
 
-📊 <b>Progress</b>
+⚡ Fast Upload
 
-During processing you'll see:
+🎥 Streamable Video Upload
 
-⬇ Download Progress
-⬆ Upload Progress
-📈 Speed
-📦 Size
-⏳ ETA
-📊 Percentage
+📁 Document Upload
 
-━━━━━━━━━━━━━━━━━━
+📺 Media Information
 
-⚙ <b>Queue System</b>
+🗑 Auto Chat Cleaner
 
-• Supports up to 20 active users.
-• If full, you'll be asked to wait until a slot is available.
+👥 Smart Queue System
 
-━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━
 
-🧹 <b>Auto Cleanup</b>
+<b>✏️ Rename</b>
 
-Old bot messages are removed automatically to keep your chat clean.
+• Send any file.
 
-━━━━━━━━━━━━━━━━━━
+• Press <b>✏ Rename</b>
 
-❓ <b>Commands</b>
+• Enter new filename.
 
-/start - Start the bot
-/help - Show this help
-/settings - User settings
-/cancel - Cancel current job
+• Choose thumbnail.
 
-━━━━━━━━━━━━━━━━━━
+• Bot uploads renamed file.
 
-💡 <b>Tips</b>
+━━━━━━━━━━━━━━━━━━━━━━
 
-✅ Send any file.
+<b>🎬 Convert</b>
 
-Choose:
+Supported:
 
-✏ Rename
-🎬 Convert
-📝 Instant Caption
+🎥 Video
 
-Then follow the on-screen instructions.
+📄 Document
 
-━━━━━━━━━━━━━━━━━━
+🎵 Audio
 
-❤️ Thank you for using AniToon Bot!
+Video uploads include
+
+✅ Streaming
+
+✅ Duration
+
+✅ Resolution
+
+✅ Thumbnail
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📝 Instant Caption</b>
+
+Edit only the caption.
+
+No download.
+
+No upload.
+
+Instant update.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🖼 Thumbnail</b>
+
+Choose
+
+🖼 Custom Thumbnail
+
+🤖 Auto Thumbnail
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📊 Progress</b>
+
+Shows
+
+⬇ Download
+
+⚙ Processing
+
+⬆ Upload
+
+Percentage
+
+Speed
+
+ETA
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+<b>👥 Queue</b>
+
+Supports up to <b>20 users</b> simultaneously.
+
+If full,
+
+the bot asks new users to wait.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+<b>💬 Commands</b>
+
+/start
+
+/help
+
+/settings
+
+/about
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+<b>❤️ Thank you for using AniToon's Bot.</b>
+
 🚀 <b>Powered By AniToon Bot</b>
 """
