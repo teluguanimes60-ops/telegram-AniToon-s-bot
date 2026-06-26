@@ -1,10 +1,10 @@
 # ==========================================
-# AniToon Bot - FINAL PLATFORM ENGINE
+# AniToon Bot - FINAL STABILITY ENGINE (FIXED)
 # ==========================================
 
 import os
-import asyncio
 import time
+import traceback
 
 from queue_system import add_user, remove_user
 from jobs import get_job, update_job
@@ -12,7 +12,42 @@ from progress import progress
 from thumbnail import get_thumb
 
 # ==========================================
-# 🚀 MAIN PIPELINE EXECUTOR
+# 🧠 SAFE UPLOAD WRAPPERS
+# ==========================================
+async def send_video(msg, file_path, caption, thumb):
+
+    try:
+        return await msg.reply_video(
+            video=file_path,
+            caption=caption,
+            thumb=thumb if thumb else None,
+            supports_streaming=True
+        )
+    except:
+        # fallback without thumb (VERY IMPORTANT FIX)
+        return await msg.reply_video(
+            video=file_path,
+            caption=caption,
+            supports_streaming=True
+        )
+
+
+async def send_doc(msg, file_path, caption, thumb):
+
+    try:
+        return await msg.reply_document(
+            document=file_path,
+            caption=caption,
+            thumb=thumb if thumb else None
+        )
+    except:
+        return await msg.reply_document(
+            document=file_path,
+            caption=caption
+        )
+
+# ==========================================
+# 🚀 MAIN PIPELINE
 # ==========================================
 async def process_pipeline(job_id, msg, bot):
 
@@ -25,7 +60,7 @@ async def process_pipeline(job_id, msg, bot):
 
     try:
 
-        # ---------------- QUEUE CHECK ----------------
+        # ---------------- QUEUE ----------------
         add_user(uid)
 
         # ---------------- DOWNLOAD ----------------
@@ -41,11 +76,9 @@ async def process_pipeline(job_id, msg, bot):
         await status.edit_text("⚙️ Processing file...")
 
         # ---------------- THUMBNAIL ----------------
-        thumb_mode = job.get("thumb_mode")
-
         thumb = await get_thumb(
             user_id=uid,
-            mode=thumb_mode,
+            mode=job.get("thumb_mode"),
             auto_path=file_path
         )
 
@@ -66,70 +99,26 @@ async def process_pipeline(job_id, msg, bot):
 
         # ---------------- UPLOAD ----------------
         if file_path.endswith((".mp4", ".mkv", ".mov")):
-
-            await msg.reply_video(
-                video=file_path,
-                caption=caption,
-                thumb=thumb,
-                supports_streaming=True
-            )
-
+            await send_video(msg, file_path, caption, thumb)
         else:
-
-            await msg.reply_document(
-                document=file_path,
-                caption=caption,
-                thumb=thumb
-            )
+            await send_doc(msg, file_path, caption, thumb)
 
         await status.edit_text("✅ Completed Successfully")
 
     except Exception as e:
 
-        await status.edit_text(f"❌ Error:\n{e}")
+        await status.edit_text("❌ Error occurred")
+
+        print("ENGINE ERROR:", e)
+        print(traceback.format_exc())
 
     finally:
 
-        # ---------------- CLEANUP ----------------
+        # ---------------- CLEANUP (ONLY ONCE) ----------------
+        remove_user(uid)
+
         try:
             if file_path and os.path.exists(file_path):
                 os.remove(file_path)
-        except:
-            pass
-
-        remove_user(uid)
-        
-import traceback
-
-async def safe_run(job_id, msg, bot, handler):
-
-    try:
-        return await handler(job_id, msg, bot)
-
-    except Exception as e:
-
-        error_text = f"""
-❌ JOB FAILED
-
-Job ID: {job_id}
-
-Error:
-{str(e)}
-
-Trace:
-{traceback.format_exc()[:1000]}
-"""
-
-        try:
-            await msg.reply_text(error_text)
-        except:
-            pass
-
-    finally:
-        # ALWAYS CLEAN QUEUE
-        try:
-            from queue_system import remove_user
-            uid = msg.from_user.id
-            remove_user(uid)
         except:
             pass
