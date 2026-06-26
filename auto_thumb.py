@@ -1,44 +1,61 @@
 import os
 import subprocess
 
+# Default ffmpeg command
 FFMPEG_PATH = "ffmpeg"
 
 
-# ---------------- INIT CHECK ----------------
+# =========================
+# SETUP FFMPEG
+# =========================
 def setup_ffmpeg():
+    """
+    Check if ffmpeg exists in system.
+    If not found, fallback to default command.
+    """
+
     global FFMPEG_PATH
 
     try:
         subprocess.run(
-            [FFMPEG_PATH, "-version"],
+            ["ffmpeg", "-version"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
+        FFMPEG_PATH = "ffmpeg"
+
     except Exception:
         FFMPEG_PATH = "ffmpeg"
 
 
-# ---------------- THUMBNAIL GENERATOR ----------------
+# =========================
+# GENERATE THUMBNAIL
+# =========================
 def generate_thumbnail(video_path):
-
-    if not video_path or not os.path.exists(video_path):
-        return None
+    """
+    Extract thumbnail from video at 5th second.
+    """
 
     try:
-        base = os.path.splitext(os.path.basename(video_path))[0]
-        thumb_path = f"{base}_thumb.jpg"
+        if not video_path or not os.path.exists(video_path):
+            return None
 
-        subprocess.run([
+        thumb_path = f"thumb_{os.path.basename(video_path)}.jpg"
+
+        cmd = [
             FFMPEG_PATH,
             "-y",
-            "-ss", "00:00:02",
+            "-ss", "00:00:05",
             "-i", video_path,
             "-frames:v", "1",
             "-q:v", "2",
             thumb_path
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
+        ]
+
+        subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
 
         if os.path.exists(thumb_path):
