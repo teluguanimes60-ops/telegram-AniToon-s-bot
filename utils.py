@@ -1,175 +1,43 @@
 # ==========================================
-# AniToon Bot - PRO UTILITIES ENGINE
+# AniToon Bot - STABLE PROGRESS ENGINE
 # ==========================================
 
-import os
-import shutil
-import subprocess
+import time
 
-from thumbnail import get_thumb
-from auto_thumb import generate_thumbnail
+last_update = {}
 
-
-# ---------------- FILE TYPE DETECTION ----------------
-def get_file_type(message):
-    """
-    Returns: video / document / audio / unknown
-    """
-
-    if message.video:
-        return "video"
-
-    if message.document:
-        return "document"
-
-    if message.audio:
-        return "audio"
-
-    return "unknown"
-
-
-# ---------------- FILE NAME DETECTION ----------------
-def get_file_name(message):
-    """
-    Extract original filename safely
-    """
-
-    if message.document and message.document.file_name:
-        return message.document.file_name
-
-    if message.video and message.video.file_name:
-        return message.video.file_name
-
-    if message.audio and message.audio.file_name:
-        return message.audio.file_name
-
-    return "file"
-
-
-# ---------------- GET EXTENSION ----------------
-def get_extension(filename):
-    """
-    Extract file extension safely
-    """
-
-    if not filename:
-        return ""
-
-    return os.path.splitext(filename)[1]
-
-
-# ---------------- SAFE RENAME ----------------
-def make_new_name(old_name, new_name):
-    """
-    Ensures extension is preserved
-    """
-
-    ext = get_extension(old_name)
-
-    if "." in new_name:
-        return new_name
-
-    return new_name + ext
-
-
-# ---------------- RENAME FILE ----------------
-def rename_file(old_path, new_path):
-    """
-    Safe rename/move operation
-    """
+# ==========================================
+async def progress(current, total, message, start):
 
     try:
-        shutil.move(old_path, new_path)
-        return new_path
-    except Exception:
-        return old_path
 
+        key = message.chat.id
 
-# ---------------- THUMBNAIL HANDLER ----------------
-def get_thumbnail(video_path, mode):
-    """
-    mode:
-    - saved
-    - auto
-    - none
-    """
+        now = time.time()
 
-    try:
-        if mode == "saved":
-            return get_thumb()
+        # throttle updates (VERY IMPORTANT)
+        if key in last_update and now - last_update[key] < 1.5:
+            return
 
-        if mode == "auto":
-            return generate_thumbnail(video_path)
+        last_update[key] = now
 
-    except Exception:
-        return None
+        percent = (current * 100) / total if total else 0
 
-    return None
+        elapsed = now - start
+        speed = current / elapsed if elapsed > 0 else 0
 
+        eta = (total - current) / speed if speed > 0 else 0
 
-# ---------------- CONVERT TO MP4 ----------------
-def convert_to_mp4(input_file):
-    """
-    Stable ffmpeg conversion
-    """
+        bar = "█" * int(percent // 10) + "░" * (10 - int(percent // 10))
 
-    output = os.path.splitext(input_file)[0] + ".mp4"
-
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        input_file,
-        "-c:v",
-        "libx264",
-        "-preset",
-        "fast",
-        "-c:a",
-        "aac",
-        output
-    ]
-
-    try:
-        subprocess.run(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+        text = (
+            f"📦 Uploading...\n\n"
+            f"[{bar}] {percent:.1f}%\n"
+            f"⚡ Speed: {speed/1024/1024:.2f} MB/s\n"
+            f"⏳ ETA: {int(eta)} sec"
         )
 
-        if os.path.exists(output):
-            return output
+        await message.edit_text(text)
 
-    except Exception:
-        pass
-
-    return input_file
-
-
-# ---------------- SAFE DELETE ----------------
-def safe_delete(path):
-    """
-    Prevents crash on file deletion
-    """
-
-    try:
-        if path and os.path.exists(path):
-            os.remove(path)
     except:
         pass
-
-
-# ---------------- FILE SIZE FORMAT ----------------
-def human_size(size):
-    """
-    Converts bytes to readable format
-    """
-
-    power = 1024
-    n = 0
-    units = ["B", "KB", "MB", "GB", "TB"]
-
-    while size > power and n < len(units) - 1:
-        size /= power
-        n += 1
-
-    return f"{size:.2f} {units[n]}"
