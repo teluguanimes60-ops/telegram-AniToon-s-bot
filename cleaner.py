@@ -1,31 +1,38 @@
 # ==========================================
-# AniToon Bot V2 - Cleaner
+# AniToon Bot - CLEANER SYSTEM (FIXED)
 # ==========================================
 
-# Stores the last bot message for each user
+# store last messages per user
 last_bot_message = {}
-
-# Stores the last user message for each user
 last_user_message = {}
 
 
+# =========================
+# SAVE BOT MESSAGE
+# =========================
 async def save_bot_message(user_id, message):
     """
-    Save the latest bot message.
+    Save latest bot message for cleanup
     """
     last_bot_message[user_id] = message
 
 
+# =========================
+# SAVE USER MESSAGE
+# =========================
 async def save_user_message(user_id, message):
     """
-    Save the latest user message.
+    Save latest user message for cleanup
     """
     last_user_message[user_id] = message
 
 
+# =========================
+# DELETE LAST BOT MESSAGE
+# =========================
 async def delete_last_bot(user_id):
     """
-    Delete the previous bot message.
+    Delete previous bot message
     """
     msg = last_bot_message.get(user_id)
 
@@ -38,9 +45,12 @@ async def delete_last_bot(user_id):
         last_bot_message.pop(user_id, None)
 
 
+# =========================
+# DELETE LAST USER MESSAGE
+# =========================
 async def delete_last_user(user_id):
     """
-    Delete the previous user message.
+    Delete previous user message
     """
     msg = last_user_message.get(user_id)
 
@@ -53,18 +63,25 @@ async def delete_last_user(user_id):
         last_user_message.pop(user_id, None)
 
 
+# =========================
+# CLEAN FULL CHAT
+# =========================
 async def clean_chat(user_id):
     """
-    Delete both previous bot and user messages.
+    Delete both bot + user last messages
     """
     await delete_last_bot(user_id)
     await delete_last_user(user_id)
 
 
+# =========================
+# SEND CLEAN MESSAGE
+# =========================
 async def send_clean(message, text, reply_markup=None):
     """
-    Delete old messages and send a new bot message.
+    Deletes old messages and sends a new clean message
     """
+
     uid = message.from_user.id
 
     await clean_chat(uid)
