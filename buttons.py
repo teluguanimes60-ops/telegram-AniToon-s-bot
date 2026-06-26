@@ -1,87 +1,151 @@
-# buttons.py (PRO CLEAN VERSION)
+# ==========================================================
+# 🤖 AniToon's Bot - Production Buttons
+# ==========================================================
 
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-CHANNEL_URL = "https://t.me/Anitoon_edit/33"
 
+# ==========================================================
+# 🏠 START MENU
+# ==========================================================
 
-# =========================
-# MAIN MENU
-# =========================
-
-def main_menu():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
-        [InlineKeyboardButton("🔄 Convert File", callback_data="convert")],
-        [InlineKeyboardButton("⚡ Instant Edit", callback_data="instant")],
-        [InlineKeyboardButton("🖼 Thumbnail", callback_data="thumb")],
-        [InlineKeyboardButton("🆘 Help", callback_data="help")]
-    ])
-
-
-# =========================
-# BACK BUTTON
-# =========================
-
-def back_btn():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔙 Back", callback_data="back")]
-    ])
-
-
-# =========================
-# PROCESS CONTROL BUTTONS
-# =========================
-
-def process_buttons(job_id):
-    return InlineKeyboardMarkup([
+def start_buttons():
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton("⏸ Pause", callback_data=f"pause_{job_id}"),
-            InlineKeyboardButton("▶ Resume", callback_data=f"resume_{job_id}")
-        ],
-        [
-            InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{job_id}")
-        ],
-        [
-            InlineKeyboardButton("📢 Channel", url=CHANNEL_URL)
+            [
+                InlineKeyboardButton("📖 Help", callback_data="help"),
+                InlineKeyboardButton("⚙️ Settings", callback_data="settings")
+            ],
+            [
+                InlineKeyboardButton("📢 Updates", url="https://t.me/YOUR_CHANNEL")
+            ],
+            [
+                InlineKeyboardButton("ℹ️ About", callback_data="about")
+            ]
         ]
-    ])
+    )
 
 
-# =========================
-# THUMBNAIL SELECTION
-# =========================
+# ==========================================================
+# 📂 FILE MENU
+# ==========================================================
 
-def thumb_buttons(job_id):
-    return InlineKeyboardMarkup([
+def file_buttons():
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton("📌 Saved Thumbnail", callback_data=f"thumb_saved_{job_id}")
-        ],
-        [
-            InlineKeyboardButton("⚡ Auto Thumbnail", callback_data=f"thumb_auto_{job_id}")
-        ],
-        [
-            InlineKeyboardButton("❌ No Thumbnail", callback_data=f"thumb_none_{job_id}")
-        ],
-        [
-            InlineKeyboardButton("🔙 Back", callback_data="back")
+            [
+                InlineKeyboardButton("✏️ Rename", callback_data="rename")
+            ],
+            [
+                InlineKeyboardButton("🎬 Convert", callback_data="convert")
+            ],
+            [
+                InlineKeyboardButton("📝 Instant Caption", callback_data="instant")
+            ],
+            [
+                InlineKeyboardButton("📊 Media Info", callback_data="mediainfo")
+            ],
+            [
+                InlineKeyboardButton("❌ Cancel", callback_data="cancel")
+            ]
         ]
-    ])
+    )
 
 
-# =========================
-# CONVERT OPTIONS
-# =========================
+# ==========================================================
+# 🎬 CONVERT MENU
+# ==========================================================
 
-def convert_buttons(job_id):
-    return InlineKeyboardMarkup([
+def convert_buttons():
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton("📹 Convert To Video (MP4)", callback_data=f"conv_video_{job_id}")
-        ],
-        [
-            InlineKeyboardButton("📁 Convert To File (Document)", callback_data=f"conv_file_{job_id}")
-        ],
-        [
-            InlineKeyboardButton("🔙 Back", callback_data="back")
+            [
+                InlineKeyboardButton("🎥 Video", callback_data="convert_video")
+            ],
+            [
+                InlineKeyboardButton("📄 Document", callback_data="convert_document")
+            ],
+            [
+                InlineKeyboardButton("🎵 Audio", callback_data="convert_audio")
+            ],
+            [
+                InlineKeyboardButton("⬅️ Back", callback_data="back_file")
+            ]
         ]
-    ])
+    )
+
+
+# ==========================================================
+# 🖼 VIDEO THUMBNAIL MENU
+# (Shown ONLY for Rename Video / Convert to Video)
+# ==========================================================
+
+def thumbnail_buttons():
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("🖼 Custom Thumbnail", callback_data="thumb_custom")
+            ],
+            [
+                InlineKeyboardButton("🤖 Auto Thumbnail", callback_data="thumb_auto")
+            ],
+            [
+                InlineKeyboardButton("⬅️ Back", callback_data="back_convert")
+            ],
+            [
+                InlineKeyboardButton("✅ Continue", callback_data="thumb_continue")
+            ]
+        ]
+    )
+
+
+# ==========================================================
+# ⚙️ SETTINGS
+# ==========================================================
+
+def settings_buttons():
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("🖼 Thumbnail", callback_data="settings_thumb")
+            ],
+            [
+                InlineKeyboardButton("🧹 Auto Clean", callback_data="settings_clean")
+            ],
+            [
+                InlineKeyboardButton("⬅️ Back", callback_data="home")
+            ]
+        ]
+    )
+
+
+# ==========================================================
+# 📤 PROGRESS BUTTONS
+# ==========================================================
+
+def progress_buttons():
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("⏸ Pause", callback_data="pause"),
+                InlineKeyboardButton("▶ Resume", callback_data="resume")
+            ],
+            [
+                InlineKeyboardButton("❌ Cancel", callback_data="cancel_job")
+            ]
+        ]
+    )
+
+
+# ==========================================================
+# 🔙 SIMPLE BACK BUTTON
+# ==========================================================
+
+def back_button():
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("⬅️ Back", callback_data="home")
+            ]
+        ]
+    )
