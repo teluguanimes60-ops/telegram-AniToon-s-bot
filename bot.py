@@ -151,7 +151,7 @@ async def text_handler(_, msg):
     user_state.pop(uid, None)
 
 # ---------------- START QUEUE SYSTEM ----------------
-start_queue()
+start_queue(app)
 
 # ---------------- RUN ----------------
 app.run()
