@@ -1,28 +1,53 @@
-import asyncio
+# ==========================================
+# AniToon Bot - QUEUE SYSTEM (FIXED)
+# ==========================================
 
+import asyncio
+import time
+
+# ---------------- QUEUE STORAGE ----------------
 active_users = set()
+queue = asyncio.Queue()
+
 MAX_USERS = 20
 
-def add_user(user_id):
-    if len(active_users) >= MAX_USERS:
-        return False
-    active_users.add(user_id)
-    return True
+# ---------------- USER CONTROL ----------------
+def add_user(uid):
+    active_users.add(uid)
 
-def remove_user(user_id):
-    active_users.discard(user_id)
+def remove_user(uid):
+    active_users.discard(uid)
 
+def is_full():
+    return len(active_users) >= MAX_USERS
 
-def start_queue(loop=None):
-    """
-    SAFE START: avoids 'no running event loop'
-    """
+# ---------------- QUEUE ADD JOB ----------------
+async def add_job(job):
+    await queue.put(job)
 
-    if loop is None:
-        loop = asyncio.get_event_loop()
+# ---------------- PROCESS QUEUE ----------------
+async def process_queue():
 
-    async def runner():
-        while True:
-            await asyncio.sleep(5)
+    while True:
+        job = await queue.get()
 
-    loop.create_task(runner())
+        try:
+            job_id = job["job_id"]
+            handler = job["handler"]
+
+            await handler(job_id)
+
+        except Exception as e:
+            print(f"Queue Error: {e}")
+
+        finally:
+            queue.task_done()
+
+# ---------------- START QUEUE (FIXED FOR RENDER) ----------------
+def start_queue():
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.create_task(process_queue())
+    loop.run_forever()
