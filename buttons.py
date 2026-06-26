@@ -2,39 +2,63 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 CHANNEL_URL = "https://t.me/Anitoon_edit/33"
 
+
 # =========================
 # MAIN MENU
 # =========================
-
 def main_menu():
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📁 Rename", callback_data="rename")],
-            [InlineKeyboardButton("🔄 Convert", callback_data="convert")],
-            [InlineKeyboardButton("⚡ Instant Edit", callback_data="instant")],
-            [InlineKeyboardButton("🖼 Thumbnail", callback_data="thumb")],
-            [InlineKeyboardButton("ℹ Help", callback_data="help")]
-        ]
-    )
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📁 Rename File", callback_data="rename")],
+        [InlineKeyboardButton("🔄 Convert File", callback_data="convert")],
+        [InlineKeyboardButton("⚡ Instant Edit", callback_data="instant")],
+        [InlineKeyboardButton("🖼 Thumbnail", callback_data="thumb")],
+        [InlineKeyboardButton("🆘 Help", callback_data="help")]
+    ])
 
 
 # =========================
 # BACK BUTTON
 # =========================
-
 def back_btn():
-    return InlineKeyboardMarkup(
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔙 Back", callback_data="back")]
+    ])
+
+
+# =========================
+# PROCESS CONTROL BUTTONS
+# =========================
+def process_buttons(job_id):
+    return InlineKeyboardMarkup([
         [
-            [InlineKeyboardButton("⬅ Back", callback_data="back")]
+            InlineKeyboardButton("⏸ Pause", callback_data=f"pause_{job_id}"),
+            InlineKeyboardButton("▶ Resume", callback_data=f"resume_{job_id}")
+        ],
+        [
+            InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{job_id}")
+        ],
+        [
+            InlineKeyboardButton("📢 Channel", url=CHANNEL_URL)
         ]
-    )
+    ])
 
 
 # =========================
-# THUMBNAIL SELECTION
+# THUMBNAIL BUTTONS
 # =========================
-
 def thumb_buttons(job_id):
-    return InlineKeyboardMarkup(
-        [
-           
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📌 Saved Thumb", callback_data=f"thumb_saved_{job_id}")],
+        [InlineKeyboardButton("⚡ Auto Thumb", callback_data=f"thumb_auto_{job_id}")],
+        [InlineKeyboardButton("❌ No Thumb", callback_data=f"thumb_none_{job_id}")]
+    ])
+
+
+# =========================
+# CONVERT BUTTONS
+# =========================
+def convert_buttons(job_id):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📹 Convert To Video", callback_data=f"conv_video_{job_id}")],
+        [InlineKeyboardButton("📁 Convert To File", callback_data=f"conv_file_{job_id}")]
+    ])
