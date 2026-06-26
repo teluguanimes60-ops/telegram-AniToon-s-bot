@@ -1,70 +1,63 @@
-# ===========================
-# AniToon Bot - INSTANT EDIT (FIXED)
-# ===========================
+# ==========================================
+# AniToon Bot - INSTANT EDIT (PRO FIXED)
+# ==========================================
 
 import os
+import time
 
+from jobs import update_job, get_job
 
-async def instant_edit(client, message, new_name):
-    """
-    Instant rename without processing UI.
-    Keeps file type same (video/document/audio).
-    """
+# ---------------- INSTANT EDIT CORE ----------------
+async def instant_edit(job_id, new_name_func):
+
+    job = get_job(job_id)
+    if not job:
+        return
+
+    msg = job.get("file")
 
     try:
-        file_msg = message.reply_to_message
+        # ---------------- GET NEW NAME ----------------
+        new_name = new_name_func()
 
-        if not file_msg:
-            await message.reply_text("⚠️ Reply to a file/video to use instant edit")
-            return
+        update_job(job_id, "new_name", new_name)
 
-        # download file quickly
-        path = await file_msg.download()
+        # ---------------- FILE INFO ONLY (NO DOWNLOAD) ----------------
+        file_name = getattr(msg, "document", None) or getattr(msg, "video", None)
 
-        # detect extension
-        ext = os.path.splitext(path)[1]
+        if file_name:
+            original_name = file_name.file_name if hasattr(file_name, "file_name") else "file"
 
-        # create new name
-        if "." in new_name:
-            new_path = new_name
+            # keep extension same
+            ext = os.path.splitext(original_name)[1]
+
+            final_name = f"{new_name}{ext}"
         else:
-            new_path = new_name + ext
+            final_name = new_name
 
-        # rename file locally
-        os.rename(path, new_path)
+        # ---------------- DIRECT RESEND ----------------
+        caption = f"⚡ Instant Edit\n\n📁 {final_name}"
 
-        caption = f"⚡ Instant Edited: {new_name}"
+        # VIDEO SEND
+        if getattr(msg, "video", None):
 
-        # send same type back
-        if file_msg.video:
-            await message.reply_video(
-                video=new_path,
-                caption=caption
+            await msg.reply_video(
+                video=msg.video.file_id,
+                caption=caption,
+                supports_streaming=True
             )
 
-        elif file_msg.document:
-            await message.reply_document(
-                document=new_path,
-                caption=caption
-            )
+        # DOCUMENT SEND
+        elif getattr(msg, "document", None):
 
-        elif file_msg.audio:
-            await message.reply_audio(
-                audio=new_path,
+            await msg.reply_document(
+                document=msg.document.file_id,
                 caption=caption
             )
 
         else:
-            await message.reply_document(
-                document=new_path,
-                caption=caption
-            )
 
-        # cleanup
-        try:
-            os.remove(new_path)
-        except:
-            pass
+            await msg.reply_text("❌ Unsupported file type")
 
     except Exception as e:
-        await message.reply_text(f"❌ Instant Edit Error:\n{e}")
+        await msg.reply_text(f"❌ Instant Edit Error:\n{e}")
