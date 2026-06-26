@@ -1,19 +1,17 @@
+# states.py (PRO STATE ENGINE FIX)
+
 # ===========================
-# AniToon Bot - STATES SYSTEM
+# Central User State Manager
 # ===========================
 
-# stores all user sessions
 user_states = {}
 
 
-# ===========================
-# SET STATE
-# ===========================
+# ---------------- SET STATE ----------------
+
 def set_state(user_id, **kwargs):
     """
-    Create or update user state
-    Example:
-    set_state(123, mode="rename", step="name")
+    Create or update user state safely
     """
 
     if user_id not in user_states:
@@ -22,59 +20,54 @@ def set_state(user_id, **kwargs):
     user_states[user_id].update(kwargs)
 
 
-# ===========================
-# GET STATE
-# ===========================
+# ---------------- GET STATE ----------------
+
 def get_state(user_id):
     """
-    Return user state safely
+    Get current user state
     """
+
     return user_states.get(user_id, {})
 
 
-# ===========================
-# CLEAR STATE
-# ===========================
+# ---------------- CLEAR STATE ----------------
+
 def clear_state(user_id):
     """
-    Remove user state after completion or cancel
+    Remove user state completely
     """
+
     if user_id in user_states:
         del user_states[user_id]
 
 
-# ===========================
-# CHECK STATE EXISTS
-# ===========================
+# ---------------- CHECK STATE ----------------
+
 def has_state(user_id):
     """
-    Check if user is in active session
+    Check if user has active session
     """
+
     return user_id in user_states
 
 
-# ===========================
-# UPDATE STEP
-# ===========================
-def set_step(user_id, step):
-    """
-    Update only step (file → name → done)
-    """
-    if user_id not in user_states:
-        user_states[user_id] = {}
+# ---------------- RESET STEP ----------------
 
-    user_states[user_id]["step"] = step
-
-
-# ===========================
-# UPDATE MODE
-# ===========================
-def set_mode(user_id, mode):
+def reset_step(user_id):
     """
-    Set mode safely
-    rename / convert / instant / thumb
+    Reset only step (not full state)
+    Useful for multi-step flows
     """
-    if user_id not in user_states:
-        user_states[user_id] = {}
 
-    user_states[user_id]["mode"] = mode
+    if user_id in user_states:
+        user_states[user_id]["step"] = None
+
+
+# ---------------- GET MODE ----------------
+
+def get_mode(user_id):
+    """
+    Quick helper to get current mode
+    """
+
+    return user_states.get(user_id, {}).get("mode")
