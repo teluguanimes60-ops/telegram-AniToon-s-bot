@@ -1,57 +1,125 @@
-# ==========================================
-# AniToon Bot - PROGRESS BAR (FIXED)
-# ==========================================
+# ==========================================================
+# 🤖 AniToon's Bot - Production Progress System
+# ==========================================================
 
 import time
 
-# ---------------- FORMAT SIZE ----------------
+from buttons import download_buttons, upload_buttons
+
+# ----------------------------------------------------------
+# Prevent FloodWait by limiting edit frequency
+# ----------------------------------------------------------
+
+_LAST_UPDATE = {}
+
+
+# ----------------------------------------------------------
+# Human Readable Size
+# ----------------------------------------------------------
+
 def human_bytes(size):
-    if not size:
-        return "0B"
+
+    if size is None:
+        return "0 B"
+
+    size = float(size)
+
+    units = ["B", "KB", "MB", "GB", "TB"]
 
     power = 1024
+
     n = 0
-    units = ["B", "KB", "MB", "GB", "TB"]
 
     while size >= power and n < len(units) - 1:
         size /= power
         n += 1
 
-    return f"{round(size, 2)} {units[n]}"
+    return f"{size:.2f} {units[n]}"
 
 
-# ---------------- PROGRESS CALLBACK ----------------
-async def progress(current, total, message, start):
+# ----------------------------------------------------------
+# ETA Format
+# ----------------------------------------------------------
+
+def human_time(seconds):
+
+    seconds = int(seconds)
+
+    m, s = divmod(seconds, 60)
+
+    h, m = divmod(m, 60)
+
+    if h:
+        return f"{h:02}:{m:02}:{s:02}"
+
+    return f"{m:02}:{s:02}"
+
+
+# ----------------------------------------------------------
+# Progress Callback
+# stage = download / upload
+# ----------------------------------------------------------
+
+async def progress(
+    current,
+    total,
+    message,
+    start_time,
+    stage="download"
+):
+
+    now = time.time()
+
+    key = message.id
+
+    if key in _LAST_UPDATE:
+
+        if now - _LAST_UPDATE[key] < 2:
+            return
+
+    _LAST_UPDATE[key] = now
 
     try:
-        now = time.time()
-        diff = now - start
 
-        if diff == 0:
-            diff = 0.1
+        elapsed = now - start_time
 
-        speed = current / diff
-        percent = (current * 100) / total
+        if elapsed <= 0:
+            elapsed = 1
 
-        # ETA
-        eta = (total - current) / speed if speed > 0 else 0
+        percent = current * 100 / total
 
-        # BAR
+        speed = current / elapsed
+
+        eta = (total - current) / speed if speed else 0
+
         filled = int(percent / 10)
+
         bar = "█" * filled + "░" * (10 - filled)
 
-        text = f"""
-📥 **Processing File**
+        if stage == "download":
 
-[{bar}] {round(percent, 2)}%
+            title = "📥 Downloading File"
 
-📦 {human_bytes(current)} / {human_bytes(total)}
-⚡ Speed: {human_bytes(speed)}/s
-⏳ ETA: {int(eta)} sec
-"""
+            keyboard = download_buttons()
 
-        # EDIT MESSAGE SAFELY
-        await message.edit_text(text)
+        else:
+
+            title = "📤 Uploading File"
+
+            keyboard = upload_buttons()
+
+        text = (
+            f"{title}\n\n"
+            f"[{bar}] {percent:.1f}%\n\n"
+            f"📦 {human_bytes(current)} / {human_bytes(total)}\n"
+            f"⚡ Speed : {human_bytes(speed)}/s\n"
+            f"⏳ ETA : {human_time(eta)}"
+        )
+
+        await message.edit_text(
+            text,
+            reply_markup=keyboard
+        )
 
     except Exception:
         pass
