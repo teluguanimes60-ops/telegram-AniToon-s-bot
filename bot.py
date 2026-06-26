@@ -1,5 +1,6 @@
 # =========================
-# AniToon Bot - CLEAN FIXED V3
+# AniToon Bot - UPGRADED V3
+# PART 1/2 - CORE + HANDLERS
 # =========================
 
 import os
@@ -15,7 +16,6 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from auto_thumb import setup_ffmpeg, generate_thumbnail
 from thumbnail import get_thumb
-from help_text import HELP_TEXT
 
 # ---------------- ENV ----------------
 
@@ -24,11 +24,26 @@ API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 if not API_ID or not API_HASH or not BOT_TOKEN:
-    raise Exception("Missing API credentials")
+    raise Exception("❌ Missing API credentials")
 
 # ---------------- INIT ----------------
 
 setup_ffmpeg()
+
+# ---------------- FLASK ----------------
+
+web = Flask(__name__)
+
+@web.route("/")
+def home():
+    return "AniToon Bot Running ✅"
+
+def run_web():
+    web.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+
+threading.Thread(target=run_web, daemon=True).start()
+
+# ---------------- BOT ----------------
 
 app = Client(
     "AniToonBot",
@@ -38,246 +53,64 @@ app = Client(
     in_memory=True
 )
 
-# ---------------- FLASK ----------------
-
-web = Flask(__name__)
-
-@web.route("/")
-def home():
-    return "Bot Running"
-
-threading.Thread(
-    target=lambda: web.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000))),
-    daemon=True
-).start()
-
-# ---------------- STORAGE ----------------
+# ---------------- MEMORY ----------------
 
 user_states = {}
 jobs = {}
 last_msg = {}
 
-# ---------------- CLEAN CHAT ----------------
+# ---------------- CLEAN MESSAGES ----------------
 
-async def clean(uid, msg=None):
+async def clean(uid, msg):
     old = last_msg.get(uid)
-
     if old:
         try:
             await old.delete()
         except:
             pass
+    last_msg[uid] = msg
 
-    if msg:
-        last_msg[uid] = msg
-
-# ---------------- UI ----------------
+# ---------------- UI BUTTONS ----------------
 
 def main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📁 Rename", callback_data="rename")],
         [InlineKeyboardButton("🔄 Convert", callback_data="convert")],
-        [InlineKeyboardButton("⚡ Instant", callback_data="instant")],
-        [InlineKeyboardButton("🖼 Thumb", callback_data="thumb")],
+        [InlineKeyboardButton("⚡ Instant Edit", callback_data="instant")],
+        [InlineKeyboardButton("🖼 Thumbnail", callback_data="thumb")],
         [InlineKeyboardButton("🆘 Help", callback_data="help")]
     ])
 
 def back_btn():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⬅ Back", callback_data="back")]
+        [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ])
 
-def process_btn(job_id):
+def process_buttons(job_id):
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("⏸ Pause", callback_data=f"pause_{job_id}"),
             InlineKeyboardButton("▶ Resume", callback_data=f"resume_{job_id}")
         ],
-        [InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{job_id}")],
-        [InlineKeyboardButton("📢 Channel", url="https://t.me/Anitoon_edit/33")]
+        [
+            InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{job_id}")
+        ],
+        [
+            InlineKeyboardButton("📢 Channel", url="https://t.me/Anitoon_edit/33")
+        ]
+    ])
+
+def thumb_buttons(job_id):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📌 Saved Thumbnail", callback_data=f"thumb_saved_{job_id}")],
+        [InlineKeyboardButton("⚡ Auto Thumbnail", callback_data=f"thumb_auto_{job_id}")],
+        [InlineKeyboardButton("❌ No Thumbnail", callback_data=f"thumb_none_{job_id}")]
     ])
 
 # ---------------- START ----------------
 
 @app.on_message(filters.command("start"))
 async def start(_, msg):
-
-    m = await msg.reply_text(
-        "👋 Welcome to AniToon Bot",
-        reply_markup=main_menu()
-    )
-
-    await clean(msg.from_user.id, m)
-
-# ---------------- CALLBACK ----------------
-
-@app.on_callback_query()
-async def cb(_, q):
-
-    uid = q.from_user.id
-    d = q.data
-
-    if d == "back":
-        user_states[uid] = {}
-        m = await q.message.reply_text("🏠 Menu", reply_markup=main_menu())
-        await clean(uid, m)
-
-    elif d == "rename":
-        user_states[uid] = {"mode": "rename"}
-        m = await q.message.reply_text("📁 Send file or video to rename", reply_markup=back_btn())
-        await clean(uid, m)
-
-    elif d == "convert":
-        user_states[uid] = {"mode": "convert"}
-        m = await q.message.reply_text("🔄 Send file/video to convert", reply_markup=back_btn())
-        await clean(uid, m)
-
-    elif d == "instant":
-        user_states[uid] = {"mode": "instant"}
-        m = await q.message.reply_text("⚡ Send file + new name", reply_markup=back_btn())
-        await clean(uid, m)
-
-    elif d == "help":
-        m = await q.message.reply_text(HELP_TEXT, reply_markup=main_menu())
-        await clean(uid, m)
-
-# ---------------- FILE HANDLER ----------------
-
-@app.on_message(filters.document | filters.video)
-async def file_handler(_, msg):
-
-    uid = msg.from_user.id
-    state = user_states.get(uid)
-
-    if not state:
-        return
-
-    if state["mode"] == "rename":
-
-        job_id = str(uuid.uuid4())[:8]
-
-        jobs[job_id] = {
-            "file": msg,
-            "mode": "rename",
-            "new_name": None,
-            "file_type": "video" if msg.video else "document",
-            "control": "run"
-        }
-
-        m = await msg.reply_text("✏️ Send new name")
-        await clean(uid, m)
-
-        state["job_id"] = job_id
-
-    elif state["mode"] == "convert":
-
-        job_id = str(uuid.uuid4())[:8]
-
-        jobs[job_id] = {
-            "file": msg,
-            "mode": "convert",
-            "file_type": "video" if msg.video else "document",
-            "control": "run"
-        }
-
-        m = await msg.reply_text("🖼 Processing convert...")
-        await clean(uid, m)
-
-        asyncio.create_task(process(job_id))
-
-    elif state["mode"] == "instant":
-
-        job_id = str(uuid.uuid4())[:8]
-
-        jobs[job_id] = {
-            "file": msg,
-            "mode": "rename",
-            "file_type": "video" if msg.video else "document",
-            "control": "run"
-        }
-
-        state["job_id"] = job_id
-
-        m = await msg.reply_text("⚡ Send new name instantly")
-        await clean(uid, m)
-
-# ---------------- TEXT ----------------
-
-@app.on_message(filters.text & ~filters.command("start"))
-async def text(_, msg):
-
-    uid = msg.from_user.id
-    state = user_states.get(uid)
-
-    if not state:
-        return
-
-    job_id = state.get("job_id")
-    if not job_id:
-        return
-
-    jobs[job_id]["new_name"] = msg.text
-
-    m = await msg.reply_text("⚙️ Processing...")
-    await clean(uid, m)
-
-    asyncio.create_task(process(job_id))
-
-    user_states.pop(uid, None)
-
-# ---------------- PROCESS ----------------
-
-async def process(job_id):
-
-    job = jobs.get(job_id)
-    if not job:
-        return
-
-    msg = job["file"]
-
-    status = await msg.reply_text("📥 Downloading...")
-
-    file_path = await msg.download()
-
-    await status.edit_text("⚙️ Processing...")
-
-    # rename only
-    if job["mode"] == "rename":
-        ext = os.path.splitext(file_path)[1]
-        new_path = job["new_name"] + ext
-        os.rename(file_path, new_path)
-        file_path = new_path
-
-    await status.edit_text("📤 Uploading...")
-
-    file_type = job["file_type"]
-
-    if file_type == "video":
-        await msg.reply_video(video=file_path)
-    else:
-        await msg.reply_document(document=file_path)
-
-    await status.edit_text("✅ Done")
-
-    try:
-        os.remove(file_path)
-    except:
-        pass
-
-    jobs.pop(job_id, None)
-
-# ---------------- RUN ----------------
-
-app.run()
-
-# =========================
-# PART 2/2 - HANDLERS + PROCESS ENGINE
-# =========================
-
-# ---------------- START ----------------
-@app.on_message(filters.command("start"))
-async def start(_, msg):
-
     name = msg.from_user.first_name or "User"
 
     text = f"""
@@ -294,12 +127,12 @@ async def start(_, msg):
 """
 
     m = await msg.reply_text(text, reply_markup=main_menu())
-    await clean_old(msg.from_user.id, m)
-
+    await clean(msg.from_user.id, m)
 
 # ---------------- CALLBACK HANDLER ----------------
+
 @app.on_callback_query()
-async def callback_handler(_, q):
+async def cb(_, q):
 
     uid = q.from_user.id
     data = q.data
@@ -308,92 +141,73 @@ async def callback_handler(_, q):
     if data == "back":
         user_states[uid] = {}
         m = await q.message.reply_text("🏠 Main Menu", reply_markup=main_menu())
-        await clean_old(uid, m)
+        await clean(uid, m)
 
-    # ---------------- RENAME ----------------
+    # RENAME
     elif data == "rename":
         user_states[uid] = {"mode": "rename", "step": "file"}
-        m = await q.message.reply_text("📁 Send file/video to rename", reply_markup=back_btn())
-        await clean_old(uid, m)
+        m = await q.message.reply_text("📁 Send file/video", reply_markup=back_btn())
+        await clean(uid, m)
 
-    # ---------------- CONVERT ----------------
+    # CONVERT
     elif data == "convert":
         user_states[uid] = {"mode": "convert", "step": "file"}
-        m = await q.message.reply_text("🔄 Send file/video to convert", reply_markup=back_btn())
-        await clean_old(uid, m)
+        m = await q.message.reply_text("🔄 Send file/video", reply_markup=back_btn())
+        await clean(uid, m)
 
-    # ---------------- INSTANT ----------------
+    # INSTANT
     elif data == "instant":
         user_states[uid] = {"mode": "instant", "step": "file"}
-        m = await q.message.reply_text("⚡ Send file → then new name", reply_markup=back_btn())
-        await clean_old(uid, m)
+        m = await q.message.reply_text("⚡ Send file (instant edit)", reply_markup=back_btn())
+        await clean(uid, m)
 
-    # ---------------- THUMB ----------------
+    # THUMB
     elif data == "thumb":
         user_states[uid] = {"mode": "thumb"}
         m = await q.message.reply_text("🖼 Send thumbnail image", reply_markup=back_btn())
-        await clean_old(uid, m)
+        await clean(uid, m)
 
-    # ---------------- HELP ----------------
+    # HELP
     elif data == "help":
-        m = await q.message.reply_text(HELP_TEXT, reply_markup=main_menu())
-        await clean_old(uid, m)
+        await q.message.reply_text("Help system coming...", reply_markup=main_menu())
 
-    # ---------------- JOB CONTROL ----------------
+    # JOB CONTROL
     elif data.startswith("pause_"):
         job_id = data.split("_")[1]
         if job_id in jobs:
             jobs[job_id]["control"] = "pause"
-        await q.answer("⏸ Paused")
+        await q.answer("Paused")
 
     elif data.startswith("resume_"):
         job_id = data.split("_")[1]
         if job_id in jobs:
             jobs[job_id]["control"] = "run"
-        await q.answer("▶ Resumed")
+        await q.answer("Resumed")
 
     elif data.startswith("cancel_"):
         job_id = data.split("_")[1]
         if job_id in jobs:
             jobs[job_id]["control"] = "cancel"
-        await q.answer("❌ Cancelled")
+        await q.answer("Cancelled")
 
-    # ---------------- THUMB ----------------
+    # THUMB
     elif data.startswith("thumb_saved_"):
         job_id = data.split("_")[-1]
-        if job_id in jobs:
-            jobs[job_id]["thumb_mode"] = "saved"
-        await q.message.reply_text("📌 Saved Thumb Selected")
+        jobs[job_id]["thumb"] = "saved"
+        await q.message.reply_text("📹 Choose convert type")
 
     elif data.startswith("thumb_auto_"):
         job_id = data.split("_")[-1]
-        if job_id in jobs:
-            jobs[job_id]["thumb_mode"] = "auto"
-        await q.message.reply_text("⚡ Auto Thumb Selected")
+        jobs[job_id]["thumb"] = "auto"
+        await q.message.reply_text("📹 Choose convert type")
 
     elif data.startswith("thumb_none_"):
         job_id = data.split("_")[-1]
-        if job_id in jobs:
-            jobs[job_id]["thumb_mode"] = "none"
-        await q.message.reply_text("❌ No Thumb Selected")
-
-    # ---------------- CONVERT TYPE ----------------
-    elif data.startswith("conv_video_"):
-        job_id = data.split("_")[-1]
-        if job_id in jobs:
-            jobs[job_id]["convert_type"] = "video"
-        asyncio.create_task(process_job(job_id))
-        await q.answer("📹 Video Selected")
-
-    elif data.startswith("conv_file_"):
-        job_id = data.split("_")[-1]
-        if job_id in jobs:
-            jobs[job_id]["convert_type"] = "file"
-        asyncio.create_task(process_job(job_id))
-        await q.answer("📁 File Selected")
-
+        jobs[job_id]["thumb"] = "none"
+        await q.message.reply_text("📹 Choose convert type")
 
 # ---------------- FILE HANDLER ----------------
+
 @app.on_message(filters.document | filters.video | filters.audio)
 async def file_handler(_, msg):
 
@@ -403,28 +217,15 @@ async def file_handler(_, msg):
     if not state:
         return
 
-    # ---------------- RENAME ----------------
+    # RENAME
     if state["mode"] == "rename":
+        state["file"] = msg
+        state["step"] = "name"
+        m = await msg.reply_text("✏️ Send new name")
+        await clean(uid, m)
 
-        job_id = str(uuid.uuid4())[:8]
-
-        jobs[job_id] = {
-            "uid": uid,
-            "file": msg,
-            "mode": "rename",
-            "new_name": None,
-            "control": "run",
-            "thumb_mode": None,
-            "file_type": "video" if msg.video else "document"
-        }
-
-        m = await msg.reply_text("✏️ Send new file name", reply_markup=back_btn())
-        await clean_old(uid, m)
-        return
-
-    # ---------------- CONVERT ----------------
-    if state["mode"] == "convert":
-
+    # CONVERT
+    elif state["mode"] == "convert":
         job_id = str(uuid.uuid4())[:8]
 
         jobs[job_id] = {
@@ -432,26 +233,33 @@ async def file_handler(_, msg):
             "file": msg,
             "mode": "convert",
             "control": "run",
-            "thumb_mode": None,
+            "thumb": None,
             "convert_type": None,
-            "new_name": None
+            "name": None
         }
 
-        m = await msg.reply_text("🖼 Choose thumbnail type", reply_markup=thumb_buttons(job_id))
-        await clean_old(uid, m)
-        return
+        await msg.reply_text("🖼 Choose thumbnail", reply_markup=thumb_buttons(job_id))
 
-    # ---------------- INSTANT ----------------
-    if state["mode"] == "instant":
+    # INSTANT (NO DOWNLOAD FLOW)
+    elif state["mode"] == "instant":
+        job_id = str(uuid.uuid4())[:8]
 
-        state["file"] = msg
+        jobs[job_id] = {
+            "uid": uid,
+            "file": msg,
+            "mode": "instant",
+            "control": "run",
+            "thumb": "none",
+            "name": None
+        }
+
+        state["job_id"] = job_id
         state["step"] = "name"
 
-        m = await msg.reply_text("⚡ Send new name instantly", reply_markup=back_btn())
-        await clean_old(uid, m)
-
+        await msg.reply_text("⚡ Send new text (instant edit)")
 
 # ---------------- TEXT HANDLER ----------------
+
 @app.on_message(filters.text & ~filters.command("start"))
 async def text_handler(_, msg):
 
@@ -461,7 +269,7 @@ async def text_handler(_, msg):
     if not state:
         return
 
-    # ---------------- RENAME ----------------
+    # RENAME NAME
     if state["mode"] == "rename" and state["step"] == "name":
 
         job_id = str(uuid.uuid4())[:8]
@@ -470,64 +278,79 @@ async def text_handler(_, msg):
             "uid": uid,
             "file": state["file"],
             "mode": "rename",
-            "new_name": msg.text,
+            "name": msg.text,
             "control": "run",
-            "thumb_mode": None,
-            "file_type": "video" if state["file"].video else "document"
+            "thumb": None
         }
 
-        m = await msg.reply_text("🖼 Choose thumbnail", reply_markup=thumb_buttons(job_id))
-        await clean_old(uid, m)
-
+        await msg.reply_text("🖼 Choose thumbnail", reply_markup=thumb_buttons(job_id))
         user_states.pop(uid, None)
+
+    # INSTANT TEXT EDIT (NO DOWNLOAD / NO UPLOAD)
+    elif state["mode"] == "instant" and state["step"] == "name":
+
+        job_id = state["job_id"]
+        jobs[job_id]["instant_text"] = msg.text
+
+        await msg.reply_text("⚡ Applying instant edit...")
+
+        asyncio.create_task(instant_edit(job_id))
+        user_states.pop(uid, None)
+
+# ---------------- INSTANT EDIT ENGINE ----------------
+
+async def instant_edit(job_id):
+
+    job = jobs.get(job_id)
+    if not job:
         return
 
-    # ---------------- INSTANT ----------------
-    if state["mode"] == "instant" and state["step"] == "name":
+    try:
+        msg = job["file"]
+        new_text = job.get("instant_text", "")
 
-        job_id = str(uuid.uuid4())[:8]
+        await msg.edit_text(new_text)
 
-        jobs[job_id] = {
-            "uid": uid,
-            "file": state["file"],
-            "mode": "rename",
-            "new_name": msg.text,
-            "control": "run",
-            "thumb_mode": "none",
-            "file_type": "video" if state["file"].video else "document"
-        }
+    except Exception as e:
+        print(e)
 
-        await msg.reply_text("⚡ Processing instant edit...")
-        asyncio.create_task(process_job(job_id))
+# =========================
+# PART 2/2 - PROCESS ENGINE
+# =========================
 
-        user_states.pop(uid, None)
-        return
+import os
+import time
+import asyncio
+import subprocess
 
+# ---------------- PROGRESS BAR ----------------
 
-# ---------------- PROGRESS ----------------
 async def progress(current, total, message, start_time):
 
     try:
-        percent = current * 100 / total
+        percent = (current * 100) / total if total else 0
 
         elapsed = time.time() - start_time
         speed = current / (elapsed + 1)
 
-        eta = (total - current) / (speed + 1)
-
         speed_mb = speed / (1024 * 1024)
+        done_mb = current / (1024 * 1024)
+        total_mb = total / (1024 * 1024)
+
+        eta = (total - current) / (speed + 1)
 
         filled = int(percent / 5)
         bar = "█" * filled + "░" * (20 - filled)
 
         text = f"""
-📥 Downloading...
+📥 DOWNLOADING
 
 [{bar}]
 
 📊 {percent:.1f}%
 
-⚡ Speed: {speed_mb:.2f} MB/s
+⚡ {speed_mb:.2f} MB/s
+📦 {done_mb:.2f} MB / {total_mb:.2f} MB
 
 ⏳ ETA: {int(eta)} sec
 """
@@ -538,7 +361,37 @@ async def progress(current, total, message, start_time):
         pass
 
 
-# ---------------- PROCESS ENGINE ----------------
+# ---------------- UPLOAD PROGRESS ----------------
+
+async def upload_progress(current, total, message, start_time):
+
+    try:
+        percent = (current * 100) / total if total else 0
+
+        elapsed = time.time() - start_time
+        speed = current / (elapsed + 1)
+
+        speed_mb = speed / (1024 * 1024)
+
+        bar = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
+
+        text = f"""
+📤 UPLOADING
+
+[{bar}]
+
+📊 {percent:.1f}%
+⚡ {speed_mb:.2f} MB/s
+"""
+
+        await message.edit_text(text, reply_markup=message.reply_markup)
+
+    except:
+        pass
+
+
+# ---------------- MAIN PROCESS ----------------
+
 async def process_job(job_id):
 
     job = jobs.get(job_id)
@@ -549,49 +402,56 @@ async def process_job(job_id):
 
     status = await file_msg.reply_text(
         "📥 Starting download...",
-        reply_markup=process_buttons(job_id)
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{job_id}")
+            ],
+            [
+                InlineKeyboardButton("📢 Channel", url="https://t.me/Anitoon_edit/33")
+            ]
+        ])
     )
 
     start_time = time.time()
-
     file_path = None
 
     try:
 
-        # DOWNLOAD
+        # ---------------- DOWNLOAD ----------------
         file_path = await file_msg.download(
             progress=progress,
             progress_args=(status, start_time)
         )
 
-        # PAUSE
-        while job.get("control") == "pause":
-            await asyncio.sleep(1)
-
+        # ---------------- CHECK CANCEL ----------------
         if job.get("control") == "cancel":
             await status.edit_text("❌ Cancelled")
             return
 
-        await status.edit_text("⚙️ Processing file...")
+        await status.edit_text("⚙️ Processing...")
 
+        # ---------------- THUMBNAIL ----------------
         thumb = None
 
-        if job.get("thumb_mode") == "saved":
+        if job.get("thumb") == "saved":
             thumb = get_thumb()
 
-        elif job.get("thumb_mode") == "auto":
-            thumb = generate_thumbnail(file_path)
+        elif job.get("thumb") == "auto":
+            try:
+                thumb = generate_thumbnail(file_path)
+            except:
+                thumb = None
 
-        # RENAME
+        # ---------------- RENAME ----------------
         if job["mode"] == "rename":
 
             ext = os.path.splitext(file_path)[1]
-            new_path = job["new_name"] + ext
+            new_path = job["name"] + ext
 
             os.rename(file_path, new_path)
             file_path = new_path
 
-        # CONVERT
+        # ---------------- CONVERT ----------------
         elif job["mode"] == "convert":
 
             if job.get("convert_type") == "video":
@@ -608,18 +468,30 @@ async def process_job(job_id):
 
                 file_path = output
 
+        # ---------------- UPLOAD ----------------
         await status.edit_text(
-            "📤 Uploading file...",
-            reply_markup=process_buttons(job_id)
+            "📤 Uploading...",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{job_id}")
+                ],
+                [
+                    InlineKeyboardButton("📢 Channel", url="https://t.me/Anitoon_edit/33")
+                ]
+            ])
         )
 
-        # STRICT MEDIA TYPE SEND (FIX YOU WANTED)
-        if job.get("file_type") == "video":
+        start_upload = time.time()
+
+        # ---------------- SEND FILE ----------------
+        if file_path.lower().endswith((".mp4", ".mkv", ".mov", ".avi")):
 
             await file_msg.reply_video(
                 video=file_path,
                 thumb=thumb,
-                caption=f"✅ Done: {job.get('new_name','file')}"
+                caption=f"✅ Done: {job.get('name','file')}",
+                progress=upload_progress,
+                progress_args=(status, start_upload)
             )
 
         else:
@@ -627,10 +499,12 @@ async def process_job(job_id):
             await file_msg.reply_document(
                 document=file_path,
                 thumb=thumb,
-                caption=f"✅ Done: {job.get('new_name','file')}"
+                caption=f"✅ Done: {job.get('name','file')}",
+                progress=upload_progress,
+                progress_args=(status, start_upload)
             )
 
-        await status.edit_text("✅ Completed")
+        await status.edit_text("✅ Completed Successfully")
 
     except Exception as e:
         await status.edit_text(f"❌ Error:\n\n{e}")
@@ -644,9 +518,3 @@ async def process_job(job_id):
             pass
 
         jobs.pop(job_id, None)
-
-
-# ---------------- RUN BOT ----------------
-if __name__ == "__main__":
-    print("🚀 AniToon Bot Started")
-    app.run()
