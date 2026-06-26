@@ -1,32 +1,57 @@
-# =========================
-# AniToon Queue System
-# =========================
+# ==========================================
+# AniToon Bot - QUEUE SYSTEM (PRO FIXED)
+# ==========================================
 
 import asyncio
+import time
 
-MAX_WORKERS = 2
-active_tasks = set()
-waiting_queue = asyncio.Queue()
+MAX_USERS = 20
 
-async def worker():
+active_users = set()        # users currently processing
+waiting_queue = []          # queued user IDs (FIFO)
+
+# ---------------- CHECK LIMIT ----------------
+def can_process(uid: int) -> bool:
+    return uid in active_users or len(active_users) < MAX_USERS
+
+# ---------------- ADD USER ----------------
+def add_user(uid: int):
+    if uid in active_users:
+        return True
+
+    if len(active_users) < MAX_USERS:
+        active_users.add(uid)
+        return True
+
+    if uid not in waiting_queue:
+        waiting_queue.append(uid)
+
+    return False
+
+# ---------------- REMOVE USER ----------------
+def remove_user(uid: int):
+    if uid in active_users:
+        active_users.discard(uid)
+
+# ---------------- GET STATUS ----------------
+def is_waiting(uid: int) -> bool:
+    return uid in waiting_queue
+
+# ---------------- PROMOTE QUEUE ----------------
+async def process_queue():
     while True:
-        job = await waiting_queue.get()
-        await job()
-        waiting_queue.task_done()
 
-def start_workers():
-    for _ in range(MAX_WORKERS):
-        asyncio.create_task(worker())
+        try:
+            if waiting_queue and len(active_users) < MAX_USERS:
 
-def add_job(job_func):
-    if len(active_tasks) < MAX_WORKERS:
-        active_tasks.add(job_func)
-        asyncio.create_task(run(job_func))
-    else:
-        waiting_queue.put_nowait(job_func)
+                uid = waiting_queue.pop(0)
+                active_users.add(uid)
 
-async def run(job_func):
-    try:
-        await job_func()
-    finally:
-        active_tasks.discard(job_func)
+        except:
+            pass
+
+        await asyncio.sleep(2)
+
+# ---------------- START QUEUE WORKER ----------------
+def start_queue():
+    asyncio.create_task(process_queue())
