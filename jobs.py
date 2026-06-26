@@ -1,87 +1,91 @@
 # ==========================================
-# AniToon Bot - JOB SYSTEM (PRO FIXED)
+# AniToon Bot - JOB SYSTEM (PRODUCTION FIXED)
 # ==========================================
 
-import uuid
-import os
+import time
+import threading
 
-# ---------------- JOB STORE ----------------
-jobs = {}
+# ---------------- MEMORY STORE ----------------
+JOBS = {}
+LOCK = threading.Lock()
 
-# ---------------- CREATE JOB ----------------
-def create_job(uid, msg, mode):
-    job_id = str(uuid.uuid4())[:8]
+# ==========================================
+# 🚀 CREATE JOB
+# ==========================================
+def create_job(job_id, uid, data=None):
 
-    jobs[job_id] = {
-        "id": job_id,
-        "uid": uid,
-        "file": msg,
+    if data is None:
+        data = {}
 
-        # core mode
-        "mode": mode,  # rename / convert / instant
+    with LOCK:
+        JOBS[job_id] = {
+            "job_id": job_id,
+            "uid": uid,
+            "status": "pending",
+            "created_at": time.time(),
 
-        # processing controls
-        "status": "running",  # running / pause / cancel
+            # default fields (prevents crash)
+            "file_path": None,
+            "new_name": None,
+            "mode": "rename",
+            "thumb_mode": "auto",
 
-        # rename
-        "new_name": None,
+            **data
+        }
 
-        # convert
-        "convert_type": None,
+    return JOBS[job_id]
 
-        # thumbnail
-        "thumb_mode": None,  # saved / auto / none
 
-        # output file
-        "file_path": None
-    }
-
-    return job_id
-
-# ---------------- GET JOB ----------------
+# ==========================================
+# 🔍 GET JOB (SAFE)
+# ==========================================
 def get_job(job_id):
-    return jobs.get(job_id)
 
-# ---------------- UPDATE JOB ----------------
+    with LOCK:
+        job = JOBS.get(job_id)
+
+    if not job:
+        return {
+            "job_id": job_id,
+            "uid": 0,
+            "status": "missing",
+            "file_path": None,
+            "new_name": None,
+            "mode": "rename",
+            "thumb_mode": "auto"
+        }
+
+    return job
+
+
+# ==========================================
+# ✏️ UPDATE JOB (SAFE PATCH)
+# ==========================================
 def update_job(job_id, key, value):
-    if job_id in jobs:
-        jobs[job_id][key] = value
 
-# ---------------- PAUSE ----------------
-def pause_job(job_id):
-    if job_id in jobs:
-        jobs[job_id]["status"] = "pause"
+    with LOCK:
+        if job_id not in JOBS:
+            JOBS[job_id] = {
+                "job_id": job_id,
+                "uid": 0
+            }
 
-# ---------------- RESUME ----------------
-def resume_job(job_id):
-    if job_id in jobs:
-        jobs[job_id]["status"] = "running"
+        JOBS[job_id][key] = value
 
-# ---------------- CANCEL ----------------
-def cancel_job(job_id):
-    if job_id in jobs:
-        jobs[job_id]["status"] = "cancel"
 
-# ---------------- CHECK STATUS ----------------
-def is_cancelled(job_id):
-    return jobs.get(job_id, {}).get("status") == "cancel"
+# ==========================================
+# ❌ DELETE JOB
+# ==========================================
+def delete_job(job_id):
 
-def is_paused(job_id):
-    return jobs.get(job_id, {}).get("status") == "pause"
+    with LOCK:
+        if job_id in JOBS:
+            del JOBS[job_id]
 
-# ---------------- CLEAN JOB ----------------
-def remove_job(job_id):
-    if job_id in jobs:
-        try:
-            jobs.pop(job_id)
-        except:
-            pass
 
-# ---------------- SET FILE PATH ----------------
-def set_file(job_id, path):
-    if job_id in jobs:
-        jobs[job_id]["file_path"] = path
-
-# ---------------- GET FILE PATH ----------------
-def get_file(job_id):
-    return jobs.get(job_id, {}).get("file_path")
+# ==========================================
+# 📊 GET ALL JOBS (DEBUG)
+# ==========================================
+def get_all_jobs():
+    with LOCK:
+        return dict(JOBS)
