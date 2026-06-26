@@ -1,84 +1,60 @@
 # ==========================================
-# AniToon Bot - PRO PROGRESS SYSTEM
+# AniToon Bot - PROGRESS BAR (FIXED)
 # ==========================================
 
 import time
+import asyncio
 
-# prevents spam editing (VERY IMPORTANT for Telegram)
-last_update_time = {}
+# ---------------- FORMAT HELPERS ----------------
+def format_bytes(size):
+    return size / (1024 * 1024)
 
-# ---------------- FORMAT SIZE ----------------
-def human_readable(size):
-    if size >= 1024 * 1024 * 1024:
-        return f"{size / (1024 * 1024 * 1024):.2f} GB"
-    elif size >= 1024 * 1024:
-        return f"{size / (1024 * 1024):.2f} MB"
-    elif size >= 1024:
-        return f"{size / 1024:.2f} KB"
-    else:
-        return f"{size} B"
+def format_speed(speed):
+    return speed / (1024 * 1024)
 
+# ---------------- GLOBAL CACHE (ANTI-SPAM) ----------------
+_last_update_time = {}
 
-# ---------------- PROGRESS BAR ----------------
-def make_bar(percent):
-    filled = int(percent / 5)
-    empty = 20 - filled
-    return "█" * filled + "░" * empty
-
-
-# ---------------- MAIN PROGRESS ----------------
+# ---------------- MAIN PROGRESS FUNCTION ----------------
 async def progress(current, total, message, start_time):
 
     try:
+        uid = getattr(message.chat, "id", None)
+
         now = time.time()
 
-        # 🔥 anti-spam (update only every 1.5 sec)
-        if message.id in last_update_time:
-            if now - last_update_time[message.id] < 1.5:
+        # anti spam: update only every 1 second per chat
+        if uid in _last_update_time:
+            if now - _last_update_time[uid] < 1:
                 return
 
-        last_update_time[message.id] = now
+        _last_update_time[uid] = now
 
-        if total == 0:
-            return
-
-        percent = (current * 100) / total
+        percent = (current / total) * 100 if total else 0
 
         elapsed = now - start_time
-        if elapsed <= 0:
-            elapsed = 1
-
-        speed = current / elapsed
+        speed = current / (elapsed + 1)
 
         eta = (total - current) / (speed + 1)
 
-        # format values
-        bar = make_bar(percent)
+        # bars
+        filled = int(percent // 5)
+        bar = "█" * filled + "░" * (20 - filled)
 
-        speed_text = human_readable(speed) + "/s"
-        current_text = human_readable(current)
-        total_text = human_readable(total)
-
-        # 📥 DOWNLOAD / UPLOAD TEXT
         text = f"""
-📥 **Processing File**
+📥 Processing File...
 
-[{bar}]
+[{bar}] {percent:.1f}%
 
-📊 **Progress:** {percent:.2f}%
-
-⚡ **Speed:** {speed_text}
-
-📦 **Done:** {current_text} / {total_text}
-
-⏳ **ETA:** {int(eta)} sec
+📦 {format_bytes(current):.2f} MB / {format_bytes(total):.2f} MB
+⚡ Speed: {format_speed(speed):.2f} MB/s
+⏳ ETA: {int(eta)} sec
 """
 
-        # edit message safely
-        await message.edit_text(
-            text,
-            reply_markup=message.reply_markup
-        )
+        try:
+            await message.edit_text(text, reply_markup=message.reply_markup)
+        except:
+            pass
 
-    except Exception:
+    except:
         pass
