@@ -76,15 +76,11 @@ async def process_queue():
 # ==========================================
 # ✅ SAFE START FUNCTION (FIX)
 # ==========================================
-def start_queue(app):
-
-    async def runner():
-        await process_queue()
-
-    # attach to running loop safely
+def start_queue():
     import threading
+    import asyncio
 
-    def run():
-        asyncio.run(runner())
+    def runner():
+        asyncio.run(process_queue())
 
-    threading.Thread(target=run, daemon=True).start()
+    threading.Thread(target=runner, daemon=True).start()
