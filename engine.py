@@ -1,38 +1,46 @@
 # ==========================================
-# AniToon Bot - FINAL STABLE ENGINE FIX
+# AniToon Bot - FINAL ENGINE (STABLE FIX)
 # ==========================================
 
 import os
 import time
-import asyncio
 import traceback
 
-from queue_system import add_user, remove_user
+from queue_system import add_user, remove_user, is_full
 from jobs import get_job, update_job
 from progress import progress
 from thumbnail import get_thumb
 
 
 # ==========================================
-# 🚀 PIPELINE CORE
+# 🚀 MAIN PIPELINE
 # ==========================================
 async def process_pipeline(job_id, msg, bot):
 
     job = get_job(job_id)
     uid = job["uid"]
 
-    status = await msg.reply_text("📥 Starting...")
+    status = await msg.reply_text("📥 Starting pipeline...")
 
     file_path = None
 
     try:
 
-        # ================= QUEUE LIMIT =================
-        if not add_user(uid):
-            await msg.reply_text("⛔ 20 users are processing. Please wait a few minutes and try again.")
+        # ======================================
+        # 🚨 QUEUE LIMIT CHECK (IMPORTANT FIX)
+        # ======================================
+        if is_full():
+            await msg.reply_text(
+                "⛔ 20 users are processing right now.\nPlease wait a few minutes and try again."
+            )
             return
 
-        # ================= DOWNLOAD =================
+        # add user AFTER check
+        add_user(uid)
+
+        # ======================================
+        # 📥 DOWNLOAD
+        # ======================================
         start = time.time()
 
         file_path = await msg.download(
@@ -44,7 +52,9 @@ async def process_pipeline(job_id, msg, bot):
 
         await status.edit_text("⚙️ Processing file...")
 
-        # ================= THUMBNAIL =================
+        # ======================================
+        # 🖼 THUMBNAIL
+        # ======================================
         thumb_mode = job.get("thumb_mode")
 
         thumb = await get_thumb(
@@ -53,7 +63,9 @@ async def process_pipeline(job_id, msg, bot):
             auto_path=file_path
         )
 
-        # ================= RENAME =================
+        # ======================================
+        # ✏️ RENAME MODE
+        # ======================================
         if job.get("mode") == "rename":
 
             new_name = job.get("new_name", "AniToon_File")
@@ -64,12 +76,14 @@ async def process_pipeline(job_id, msg, bot):
             os.rename(file_path, new_path)
             file_path = new_path
 
+        # ======================================
+        # 📤 UPLOAD
+        # ======================================
         await status.edit_text("📤 Uploading...")
 
         caption = f"✅ {job.get('new_name','AniToon File')}"
 
-        # ================= UPLOAD =================
-        if file_path.endswith((".mp4", ".mkv", ".mov")):
+        if file_path.endswith((".mp4", ".mkv", ".mov", ".avi")):
 
             await msg.reply_video(
                 video=file_path,
@@ -92,42 +106,19 @@ async def process_pipeline(job_id, msg, bot):
 
         await status.edit_text(f"❌ Error:\n{e}")
 
+        print("ENGINE ERROR:")
+        print(traceback.format_exc())
+
     finally:
 
+        # ======================================
+        # 🧹 CLEANUP (VERY IMPORTANT)
+        # ======================================
         try:
             if file_path and os.path.exists(file_path):
                 os.remove(file_path)
         except:
             pass
 
+        # remove user ALWAYS
         remove_user(uid)
-
-
-# ==========================================
-# SAFE WRAPPER
-# ==========================================
-async def safe_run(job_id, msg, bot, handler):
-
-    try:
-        return await handler(job_id, msg, bot)
-
-    except Exception:
-        error_text = f"""
-❌ JOB FAILED
-
-Job ID: {job_id}
-
-Error:
-{traceback.format_exc()[:1500]}
-"""
-        try:
-            await msg.reply_text(error_text)
-        except:
-            pass
-
-    finally:
-        try:
-            uid = msg.from_user.id
-            remove_user(uid)
-        except:
-            pass
