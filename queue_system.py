@@ -1,53 +1,147 @@
-# ==========================================
-# AniToon Bot - QUEUE SYSTEM (FIXED)
-# ==========================================
+# ==========================================================
+# 🤖 AniToon's Bot - Queue System v2
+# Render + Pyrogram Compatible
+# ==========================================================
 
 import asyncio
-import time
+from collections import deque
 
-# ---------------- QUEUE STORAGE ----------------
-active_users = set()
-queue = asyncio.Queue()
+# ==========================================================
+# CONFIG
+# ==========================================================
 
-MAX_USERS = 20
+MAX_ACTIVE_USERS = 20
 
-# ---------------- USER CONTROL ----------------
-def add_user(uid):
-    active_users.add(uid)
+# ==========================================================
+# STORAGE
+# ==========================================================
 
-def remove_user(uid):
-    active_users.discard(uid)
+ACTIVE_USERS = set()
+
+WAITING_QUEUE = deque()
+
+QUEUE_RUNNING = False
+
+QUEUE_LOCK = asyncio.Lock()
+
+# ==========================================================
+# USER FUNCTIONS
+# ==========================================================
+
+def active_count():
+    return len(ACTIVE_USERS)
+
 
 def is_full():
-    return len(active_users) >= MAX_USERS
+    return len(ACTIVE_USERS) >= MAX_ACTIVE_USERS
 
-# ---------------- QUEUE ADD JOB ----------------
-async def add_job(job):
-    await queue.put(job)
 
-# ---------------- PROCESS QUEUE ----------------
+def user_processing(user_id):
+    return user_id in ACTIVE_USERS
+
+
+def add_user(user_id):
+    ACTIVE_USERS.add(user_id)
+
+
+def remove_user(user_id):
+    ACTIVE_USERS.discard(user_id)
+
+
+# ==========================================================
+# WAITING QUEUE
+# ==========================================================
+
+async def add_to_queue(job):
+
+    async with QUEUE_LOCK:
+        WAITING_QUEUE.append(job)
+
+
+async def next_job():
+
+    async with QUEUE_LOCK:
+
+        if not WAITING_QUEUE:
+            return None
+
+        return WAITING_QUEUE.popleft()
+
+
+# ==========================================================
+# MAIN PROCESSOR
+# ==========================================================
+
 async def process_queue():
 
+    global QUEUE_RUNNING
+
+    if QUEUE_RUNNING:
+        return
+
+    QUEUE_RUNNING = True
+
     while True:
-        job = await queue.get()
+
+        if is_full():
+
+            await asyncio.sleep(1)
+            continue
+
+        job = await next_job()
+
+        if job is None:
+
+            await asyncio.sleep(0.5)
+            continue
 
         try:
-            job_id = job["job_id"]
+
+            uid = job["uid"]
+
             handler = job["handler"]
 
-            await handler(job_id)
+            add_user(uid)
+
+            asyncio.create_task(run_job(uid, handler))
 
         except Exception as e:
-            print(f"Queue Error: {e}")
 
-        finally:
-            queue.task_done()
+            print("QUEUE ERROR:", e)
 
-# ---------------- START QUEUE (FIXED FOR RENDER) ----------------
-def start_queue():
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+# ==========================================================
+# RUN SINGLE JOB
+# ==========================================================
 
-    loop.create_task(process_queue())
-    loop.run_forever()
+async def run_job(uid, handler):
+
+    try:
+
+        await handler()
+
+    except Exception as e:
+
+        print("JOB ERROR:", e)
+
+    finally:
+
+        remove_user(uid)
+
+
+# ==========================================================
+# START QUEUE
+# ==========================================================
+
+def start_queue(app=None):
+    """
+    Call this ONCE after app.start()
+
+    Example:
+
+        app.start()
+        start_queue(app)
+        idle()
+    """
+
+    asyncio.get_running_loop().create_task(process_queue())
