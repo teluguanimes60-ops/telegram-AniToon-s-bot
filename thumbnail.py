@@ -1,86 +1,75 @@
 # ==========================================
-# AniToon Bot - PRO THUMBNAIL SYSTEM
+# AniToon Bot - THUMBNAIL SYSTEM (MONGO V4)
 # ==========================================
 
 import os
+from db import save_thumbnail, get_thumbnail as db_get_thumb
 
-THUMB_FILE = "saved_thumbnail.jpg"
-
-
-# ---------------- SAVE THUMBNAIL ----------------
-def save_thumb(path):
+# ==========================================
+# 🖼 SAVE THUMBNAIL
+# ==========================================
+async def save_thumb(user_id: int, file_id: str):
     """
-    Save user thumbnail (replace old one safely)
+    Save thumbnail permanently in MongoDB
     """
+    await save_thumbnail(user_id, file_id)
 
-    try:
-        # delete old thumbnail if exists
-        if os.path.exists(THUMB_FILE):
-            os.remove(THUMB_FILE)
-
-        # move new thumbnail
-        os.rename(path, THUMB_FILE)
-
-        return True
-
-    except Exception:
-        return False
-
-
-# ---------------- GET SAVED THUMB ----------------
-def get_thumb():
+# ==========================================
+# 📥 GET THUMBNAIL (MAIN FUNCTION)
+# ==========================================
+async def get_thumb(user_id: int = None, mode: str = "saved", auto_path: str = None):
     """
-    Return saved thumbnail if exists
-    """
-
-    if os.path.exists(THUMB_FILE):
-        return THUMB_FILE
-
-    return None
-
-
-# ---------------- DELETE THUMB ----------------
-def delete_thumb():
-    """
-    Remove saved thumbnail
+    Returns thumbnail based on mode:
+    - saved → MongoDB thumbnail
+    - auto → generate from video
+    - none → None
     """
 
     try:
-        if os.path.exists(THUMB_FILE):
-            os.remove(THUMB_FILE)
-        return True
-    except:
-        return False
 
-
-# ---------------- VALIDATE THUMB ----------------
-def is_thumb_available():
-    """
-    Check if thumbnail exists and is usable
-    """
-
-    return os.path.exists(THUMB_FILE)
-
-
-# ---------------- SAFE THUMB SELECTOR ----------------
-def get_safe_thumb(mode, auto_thumb_func=None, video_path=None):
-    """
-    Unified thumbnail system:
-
-    mode:
-    - saved → uses saved thumbnail
-    - auto → generates from video
-    - none → no thumbnail
-    """
-
-    if mode == "saved":
-        return get_thumb()
-
-    elif mode == "auto":
-        try:
-            if auto_thumb_func and video_path:
-                return auto_thumb_func(video_path)
-        except:
+        # ❌ no thumbnail
+        if mode == "none":
             return None
+
+        # 📌 saved thumbnail from DB
+        if mode == "saved" and user_id is not None:
+            return await db_get_thumb(user_id)
+
+        # ⚡ auto thumbnail from file
+        if mode == "auto" and auto_path:
+
+            return _generate_local_thumb(auto_path)
+
+        return None
+
+    except:
+        return None
+
+# ==========================================
+# ⚡ AUTO THUMBNAIL GENERATOR (FFMPEG)
+# ==========================================
+def _generate_local_thumb(video_path: str):
+
+    try:
+        import subprocess
+
+        thumb_path = f"{video_path}_thumb.jpg"
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i", video_path,
+            "-ss", "00:00:01",
+            "-vframes", "1",
+            thumb_path
+        ]
+
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        if os.path.exists(thumb_path):
+            return thumb_path
+
+    except:
+        pass
 
     return None
