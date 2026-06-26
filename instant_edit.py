@@ -1,63 +1,51 @@
 # ==========================================
-# AniToon Bot - INSTANT EDIT (PRO FIXED)
+# AniToon Bot - Instant Caption Editor
 # ==========================================
 
-import os
-import time
+from jobs import update_job
 
-from jobs import update_job, get_job
+# Stores message IDs that can be edited later
+EDIT_CACHE = {}
 
-# ---------------- INSTANT EDIT CORE ----------------
-async def instant_edit(job_id, new_name_func):
 
-    job = get_job(job_id)
-    if not job:
-        return
+def save_editable_message(user_id, message):
+    """
+    Save the sent media message for later caption editing.
+    """
+    EDIT_CACHE[user_id] = {
+        "chat_id": message.chat.id,
+        "message_id": message.id,
+    }
 
-    msg = job.get("file")
+
+def get_editable_message(user_id):
+    """
+    Get saved message info.
+    """
+    return EDIT_CACHE.get(user_id)
+
+
+async def instant_edit_caption(client, user_id, new_caption):
+    """
+    Instantly edit the caption of the last uploaded media.
+    """
+
+    data = get_editable_message(user_id)
+
+    if not data:
+        return False
 
     try:
-        # ---------------- GET NEW NAME ----------------
-        new_name = new_name_func()
+        await client.edit_message_caption(
+            chat_id=data["chat_id"],
+            message_id=data["message_id"],
+            caption=new_caption
+        )
 
-        update_job(job_id, "new_name", new_name)
+        update_job(str(data["message_id"]), "caption", new_caption)
 
-        # ---------------- FILE INFO ONLY (NO DOWNLOAD) ----------------
-        file_name = getattr(msg, "document", None) or getattr(msg, "video", None)
-
-        if file_name:
-            original_name = file_name.file_name if hasattr(file_name, "file_name") else "file"
-
-            # keep extension same
-            ext = os.path.splitext(original_name)[1]
-
-            final_name = f"{new_name}{ext}"
-        else:
-            final_name = new_name
-
-        # ---------------- DIRECT RESEND ----------------
-        caption = f"⚡ Instant Edit\n\n📁 {final_name}"
-
-        # VIDEO SEND
-        if getattr(msg, "video", None):
-
-            await msg.reply_video(
-                video=msg.video.file_id,
-                caption=caption,
-                supports_streaming=True
-            )
-
-        # DOCUMENT SEND
-        elif getattr(msg, "document", None):
-
-            await msg.reply_document(
-                document=msg.document.file_id,
-                caption=caption
-            )
-
-        else:
-
-            await msg.reply_text("❌ Unsupported file type")
+        return True
 
     except Exception as e:
-        await msg.reply_text(f"❌ Instant Edit Error:\n{e}")
+        print("Instant Edit Error:", e)
+        return False
