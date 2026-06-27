@@ -1,113 +1,91 @@
-# ==========================================================
-# 🤖 AniToon Bot - Thumbnail Manager (Production v5)
-# ==========================================================
-
 import os
+import tempfile
+import subprocess
 
 from db import (
     save_thumbnail,
-    get_thumbnail
+    get_thumbnail as db_get_thumbnail
 )
 
-from auto_thumb import (
-    generate_thumbnail,
-    delete_thumbnail
-)
 
-# ==========================================================
-# SAVE USER THUMBNAIL
-# ==========================================================
-
-async def save_thumb(user_id: int, file_id: str):
-    """
-    Save user's custom thumbnail.
-    """
+async def save_thumb(user_id, file_id):
     await save_thumbnail(user_id, file_id)
 
 
-# ==========================================================
-# GET THUMBNAIL
-# ==========================================================
+async def get_thumb(client=None,
+                    user_id=None,
+                    mode="auto",
+                    auto_path=None):
 
-async def get_thumb(
-    user_id=None,
-    mode="auto",
-    auto_path=None
-):
-    """
-    Modes:
-        custom -> User's saved thumbnail
-        auto   -> Generate automatically
-        none   -> No thumbnail
-    """
-
-    try:
-
-        # ---------------- NONE ----------------
-
-        if mode == "none":
-            return None
-
-        # ---------------- CUSTOM ----------------
-
-        if mode == "custom":
-
-            if not user_id:
-                return None
-
-            thumb = await get_thumbnail(user_id)
-
-            # Local image path
-            if thumb and os.path.exists(thumb):
-                return thumb
-
-            # Telegram file_id
-            if thumb:
-                return thumb
-
-            return None
-
-        # ---------------- AUTO ----------------
-
-        if mode == "auto":
-
-            if not auto_path:
-                return None
-
-            return generate_thumbnail(auto_path)
-
+    if mode == "none":
         return None
 
-    except Exception as e:
+    # --------------------------
+    # Custom Thumbnail
+    # --------------------------
+    if mode == "saved":
 
-        print("THUMBNAIL ERROR:", e)
+        if not client:
+            return None
 
+        file_id = await db_get_thumbnail(user_id)
+
+        if not file_id:
+            return None
+
+        tmp = tempfile.NamedTemporaryFile(
+            suffix=".jpg",
+            delete=False
+        )
+
+        tmp.close()
+
+        await client.download_media(
+            file_id,
+            file_name=tmp.name
+        )
+
+        return tmp.name
+
+    # --------------------------
+    # Auto Thumbnail
+    # --------------------------
+    if mode == "auto":
+
+        if not auto_path:
+            return None
+
+        return generate_auto_thumb(auto_path)
+
+    return None
+
+
+def generate_auto_thumb(video):
+
+    if not os.path.exists(video):
         return None
 
+    thumb = video + "_thumb.jpg"
 
-# ==========================================================
-# CLEANUP AUTO THUMB
-# ==========================================================
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-ss",
+        "00:00:03",
+        "-i",
+        video,
+        "-frames:v",
+        "1",
+        thumb
+    ]
 
-def cleanup_thumb(path):
-    """
-    Delete generated thumbnail after upload.
-    """
+    subprocess.run(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
 
-    try:
+    if os.path.exists(thumb):
+        return thumb
 
-        if path and os.path.exists(path):
-
-            delete_thumbnail(path)
-
-    except Exception:
-        pass
-
-
-# ==========================================================
-# CHECK THUMB
-# ==========================================================
-
-def thumb_exists(path):
-
-    return bool(path and os.path.exists(path))
+    return None
