@@ -1,5 +1,5 @@
 # ==========================================================
-# 🤖 AniToon Bot - Progress System (Production V7)
+# 🤖 AniToon Bot - Progress System (Production V8)
 # ==========================================================
 
 import time
@@ -13,9 +13,7 @@ from states import get_state
 # ==========================================================
 
 LAST_UPDATE = {}
-
 UPDATE_INTERVAL = 2
-
 
 # ==========================================================
 # HUMAN SIZE
@@ -25,7 +23,7 @@ def human_size(size):
 
     size = float(size)
 
-    for unit in ["B", "KB", "MB", "GB", "TB"]:
+    for unit in ("B", "KB", "MB", "GB", "TB"):
 
         if size < 1024:
             return f"{size:.2f} {unit}"
@@ -33,7 +31,6 @@ def human_size(size):
         size /= 1024
 
     return f"{size:.2f} PB"
-
 
 # ==========================================================
 # HUMAN TIME
@@ -52,22 +49,20 @@ def human_time(seconds):
 
     return f"{m:02}:{s:02}"
 
-
 # ==========================================================
-# PROGRESS BAR
+# BAR
 # ==========================================================
 
 def progress_bar(percent):
 
     total = 20
 
-    filled = int(percent / 100 * total)
+    filled = int(total * percent / 100)
 
     return "█" * filled + "░" * (total - filled)
 
-
 # ==========================================================
-# MAIN CALLBACK
+# CALLBACK
 # ==========================================================
 
 async def progress(
@@ -78,21 +73,15 @@ async def progress(
     stage="download"
 ):
 
-    state = get_state(message.reply_to_message.from_user.id if message.reply_to_message else message.chat.id)
+    user_id = message.chat.id
 
-    # -------------------------
-    # Pause
-    # -------------------------
+    state = get_state(user_id)
 
-while state.get("paused", False):
-    await asyncio.sleep(0.5)
-    
-    # -------------------------
-    # Cancel
-    # -------------------------
+    while state.get("paused", False):
+        await asyncio.sleep(0.5)
 
     if state.get("cancelled", False):
-        raise Exception("Job Cancelled")
+        raise Exception("Cancelled")
 
     now = time.time()
 
