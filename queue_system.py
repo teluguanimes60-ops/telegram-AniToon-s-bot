@@ -37,6 +37,10 @@ def queue_count():
     return len(WAITING_QUEUE)
 
 
+def queue_size():
+    return len(WAITING_QUEUE)
+
+
 def is_full():
     return len(ACTIVE_USERS) >= MAX_ACTIVE_USERS
 
