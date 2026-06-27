@@ -89,3 +89,13 @@ def generate_auto_thumb(video):
         return thumb
 
     return None
+    
+import os
+
+
+def delete_auto_thumb(path):
+    try:
+        if path and os.path.exists(path):
+            os.remove(path)
+    except:
+        pass
