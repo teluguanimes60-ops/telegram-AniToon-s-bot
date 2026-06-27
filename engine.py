@@ -51,22 +51,20 @@ AUDIO_EXTENSIONS = (
 
 
 # ==========================================================
-# TEMP CLEANER
+# SAFE DELETE
 # ==========================================================
 
 def safe_delete(path):
 
     try:
-
         if path and os.path.exists(path):
             os.remove(path)
-
-    except:
+    except Exception:
         pass
 
 
 # ==========================================================
-# SIMPLE CONVERTER
+# CONVERTER
 # ==========================================================
 
 def convert_file(input_file, mode):
@@ -80,14 +78,10 @@ def convert_file(input_file, mode):
         cmd = [
             "ffmpeg",
             "-y",
-            "-i",
-            input_file,
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-c:a",
-            "aac",
+            "-i", input_file,
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-c:a", "aac",
             output
         ]
 
@@ -98,8 +92,7 @@ def convert_file(input_file, mode):
         cmd = [
             "ffmpeg",
             "-y",
-            "-i",
-            input_file,
+            "-i", input_file,
             output
         ]
 
@@ -111,14 +104,20 @@ def convert_file(input_file, mode):
 
         return input_file
 
-    subprocess.run(
-        cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
+    try:
 
-    if os.path.exists(output):
-        return output
+        subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True
+        )
+
+        if os.path.exists(output):
+            return output
+
+    except Exception:
+        pass
 
     return input_file
 
@@ -139,18 +138,21 @@ async def process_pipeline(job_id, message, bot):
 
         return
 
+    uid = job["uid"]
+
     status = await message.reply_text(
         "📥 Starting..."
     )
 
     file_path = None
     thumb = None
+    auto_thumb = False
 
     try:
 
-        # =====================================================
+        # ==========================================
         # DOWNLOAD
-        # =====================================================
+        # ==========================================
 
         update_job(job_id, "status", "downloading")
 
@@ -165,15 +167,19 @@ async def process_pipeline(job_id, message, bot):
             )
         )
 
-        update_job(job_id, "file_path", file_path)
-
-        await status.edit_text(
-            "⚙️ Processing..."
+        update_job(
+            job_id,
+            "file_path",
+            file_path
         )
 
-        # =====================================================
-        # MEDIA INFO
-        # =====================================================
+        await status.edit_text(
+            "⚙ Processing..."
+        )
+
+        # ==========================================
+        # MEDIA INFO MODE
+        # ==========================================
 
         if job.get("mode") == "media_info":
 
@@ -181,11 +187,15 @@ async def process_pipeline(job_id, message, bot):
 
             await message.reply_text(text)
 
+            safe_delete(file_path)
+
+            delete_job(job_id)
+
             return
 
-        # =====================================================
+        # ==========================================
         # CONVERT
-        # =====================================================
+        # ==========================================
 
         convert_mode = job.get("convert_mode")
 
@@ -207,17 +217,15 @@ async def process_pipeline(job_id, message, bot):
                 file_path
             )
 
-        # =====================================================
+        # ==========================================
         # RENAME
-        # =====================================================
+        # ==========================================
 
         if job.get("new_name"):
 
             ext = os.path.splitext(file_path)[1]
 
-            new_path = (
-                job["new_name"] + ext
-            )
+            new_path = job["new_name"] + ext
 
             shutil.move(
                 file_path,
@@ -232,12 +240,13 @@ async def process_pipeline(job_id, message, bot):
                 file_path
             )
 
-        # =====================================================
+        # ==========================================
         # THUMBNAIL
-        # =====================================================
+        # ==========================================
 
         thumb = await get_thumb(
-            user_id=job["uid"],
+            client=bot,
+            user_id=uid,
             mode=job.get(
                 "thumb_mode",
                 "auto"
@@ -245,9 +254,15 @@ async def process_pipeline(job_id, message, bot):
             auto_path=file_path
         )
 
-        # =====================================================
+        if (
+            job.get("thumb_mode") == "auto"
+            and thumb
+        ):
+            auto_thumb = True
+
+                    # ==========================================
         # UPLOADING
-        # =====================================================
+        # ==========================================
 
         update_job(
             job_id,
@@ -284,8 +299,10 @@ async def process_pipeline(job_id, message, bot):
 
         else:
 
-            if job.get("thumb_mode") == "none":
+            # Documents can use custom/auto thumbnail.
+            # If user selected "none", upload without thumb.
 
+            if job.get("thumb_mode") == "none":
                 thumb = None
 
             await message.reply_document(
@@ -300,19 +317,31 @@ async def process_pipeline(job_id, message, bot):
                 )
             )
 
+        # ==========================================
+        # FINISHED
+        # ==========================================
+
         update_job(
             job_id,
             "status",
             "completed"
         )
 
-        await status.edit_text(
-            "✅ Completed Successfully."
-        )
+        try:
+
+            await status.edit_text(
+                "✅ File processed successfully."
+            )
+
+        except:
+            pass
 
     except Exception as e:
 
+        print("=" * 60)
+        print("ENGINE ERROR")
         print(traceback.format_exc())
+        print("=" * 60)
 
         update_job(
             job_id,
@@ -325,14 +354,32 @@ async def process_pipeline(job_id, message, bot):
             await status.edit_text(
                 f"❌ Processing Failed\n\n{e}"
             )
-
         except:
             pass
 
     finally:
 
+        # ------------------------------------------
+        # Delete processed file
+        # ------------------------------------------
+
         safe_delete(file_path)
 
-        delete_auto_thumb(thumb)
+        # ------------------------------------------
+        # Delete only AUTO thumbnail
+        # Custom thumbnails downloaded from Telegram
+        # are temporary files, so delete them normally.
+        # ------------------------------------------
+
+        if thumb:
+
+            if auto_thumb:
+                delete_auto_thumb(thumb)
+            else:
+                safe_delete(thumb)
+
+        # ------------------------------------------
+        # Remove Job
+        # ------------------------------------------
 
         delete_job(job_id)
