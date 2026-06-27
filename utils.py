@@ -1,43 +1,181 @@
-# ==========================================
-# AniToon Bot - STABLE PROGRESS ENGINE
-# ==========================================
+# ==========================================================
+# 🤖 AniToon Bot - Utility Functions (Production v5)
+# ==========================================================
 
-import time
+import os
+import uuid
 
-last_update = {}
+# ==========================================================
+# HUMAN FILE SIZE
+# ==========================================================
 
-# ==========================================
-async def progress(current, total, message, start):
+def human_size(size):
+
+    if not size:
+        return "0 B"
+
+    size = float(size)
+
+    units = ["B", "KB", "MB", "GB", "TB"]
+
+    i = 0
+
+    while size >= 1024 and i < len(units) - 1:
+        size /= 1024
+        i += 1
+
+    return f"{size:.2f} {units[i]}"
+
+
+# ==========================================================
+# HUMAN TIME
+# ==========================================================
+
+def human_time(seconds):
+
+    seconds = int(seconds)
+
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+
+    if h:
+        return f"{h:02}:{m:02}:{s:02}"
+
+    return f"{m:02}:{s:02}"
+
+
+# ==========================================================
+# FILE NAME
+# ==========================================================
+
+def file_name(path):
+
+    return os.path.basename(path)
+
+
+# ==========================================================
+# FILE EXTENSION
+# ==========================================================
+
+def file_ext(path):
+
+    return os.path.splitext(path)[1]
+
+
+# ==========================================================
+# FILE NAME WITHOUT EXTENSION
+# ==========================================================
+
+def file_stem(path):
+
+    return os.path.splitext(os.path.basename(path))[0]
+
+
+# ==========================================================
+# CHANGE FILE NAME
+# ==========================================================
+
+def rename_file(path, new_name):
+
+    ext = file_ext(path)
+
+    new_path = os.path.join(
+        os.path.dirname(path),
+        new_name + ext
+    )
+
+    os.rename(path, new_path)
+
+    return new_path
+
+
+# ==========================================================
+# UNIQUE FILE NAME
+# ==========================================================
+
+def unique_name(ext=""):
+
+    if ext and not ext.startswith("."):
+        ext = "." + ext
+
+    return f"{uuid.uuid4().hex}{ext}"
+
+
+# ==========================================================
+# SAFE DELETE
+# ==========================================================
+
+def safe_delete(path):
 
     try:
 
-        key = message.chat.id
+        if path and os.path.exists(path):
 
-        now = time.time()
+            os.remove(path)
 
-        # throttle updates (VERY IMPORTANT)
-        if key in last_update and now - last_update[key] < 1.5:
-            return
-
-        last_update[key] = now
-
-        percent = (current * 100) / total if total else 0
-
-        elapsed = now - start
-        speed = current / elapsed if elapsed > 0 else 0
-
-        eta = (total - current) / speed if speed > 0 else 0
-
-        bar = "█" * int(percent // 10) + "░" * (10 - int(percent // 10))
-
-        text = (
-            f"📦 Uploading...\n\n"
-            f"[{bar}] {percent:.1f}%\n"
-            f"⚡ Speed: {speed/1024/1024:.2f} MB/s\n"
-            f"⏳ ETA: {int(eta)} sec"
-        )
-
-        await message.edit_text(text)
-
-    except:
+    except Exception:
         pass
+
+
+# ==========================================================
+# CREATE DIRECTORY
+# ==========================================================
+
+def ensure_dir(path):
+
+    os.makedirs(path, exist_ok=True)
+
+
+# ==========================================================
+# IS VIDEO
+# ==========================================================
+
+VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".mkv",
+    ".avi",
+    ".mov",
+    ".webm",
+    ".m4v",
+    ".ts",
+    ".flv"
+}
+
+def is_video(path):
+
+    return file_ext(path).lower() in VIDEO_EXTENSIONS
+
+
+# ==========================================================
+# IS AUDIO
+# ==========================================================
+
+AUDIO_EXTENSIONS = {
+    ".mp3",
+    ".aac",
+    ".wav",
+    ".flac",
+    ".m4a",
+    ".ogg"
+}
+
+def is_audio(path):
+
+    return file_ext(path).lower() in AUDIO_EXTENSIONS
+
+
+# ==========================================================
+# IS IMAGE
+# ==========================================================
+
+IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp"
+}
+
+def is_image(path):
+
+    return file_ext(path).lower() in IMAGE_EXTENSIONS
