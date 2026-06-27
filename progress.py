@@ -1,16 +1,9 @@
 # ==========================================================
-# 🤖 AniToon Bot - Progress System (Production v5)
+# 🤖 AniToon Bot - Progress System (Production v6)
 # ==========================================================
 
 import time
-
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-# ==========================================================
-# CHANNEL
-# ==========================================================
-
-CHANNEL_URL = "https://t.me/Anitoon_edit/33"
+from buttons import download_buttons, upload_buttons
 
 # ==========================================================
 # FLOOD PROTECTION
@@ -27,33 +20,36 @@ def human_size(size):
     if not size:
         return "0 B"
 
+    power = 1024
+    n = 0
     units = ["B", "KB", "MB", "GB", "TB"]
 
     size = float(size)
 
-    i = 0
+    while size >= power and n < len(units) - 1:
+        size /= power
+        n += 1
 
-    while size >= 1024 and i < len(units) - 1:
-        size /= 1024
-        i += 1
+    return f"{size:.2f} {units[n]}"
 
-    return f"{size:.2f} {units[i]}"
 
 # ==========================================================
-# ETA
+# HUMAN TIME
 # ==========================================================
 
 def human_time(seconds):
 
     seconds = int(seconds)
 
-    h, rem = divmod(seconds, 3600)
-    m, s = divmod(rem, 60)
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
 
     if h:
         return f"{h:02}:{m:02}:{s:02}"
 
     return f"{m:02}:{s:02}"
+
 
 # ==========================================================
 # PROGRESS BAR
@@ -65,57 +61,6 @@ def progress_bar(percent):
 
     return "█" * filled + "░" * (10 - filled)
 
-# ==========================================================
-# DOWNLOAD BUTTONS
-# ==========================================================
-
-def download_keyboard():
-
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "⏸ Pause",
-                callback_data="pause"
-            ),
-            InlineKeyboardButton(
-                "▶ Resume",
-                callback_data="resume"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "❌ Cancel",
-                callback_data="cancel_job"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📢 My Channels",
-                url=CHANNEL_URL
-            )
-        ]
-    ])
-
-# ==========================================================
-# UPLOAD BUTTONS
-# ==========================================================
-
-def upload_keyboard():
-
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "❌ Cancel",
-                callback_data="cancel_job"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📢 My Channels",
-                url=CHANNEL_URL
-            )
-        ]
-    ])
 
 # ==========================================================
 # MAIN CALLBACK
@@ -134,7 +79,6 @@ async def progress(
     key = message.id
 
     if key in _LAST_UPDATE:
-
         if now - _LAST_UPDATE[key] < 2:
             return
 
@@ -144,38 +88,33 @@ async def progress(
 
         elapsed = max(now - start_time, 1)
 
-        percent = current * 100 / total if total else 0
+        percent = (current * 100) / total if total else 0
 
         speed = current / elapsed
 
         eta = (total - current) / speed if speed else 0
 
-        bar = progress_bar(percent)
-
-        if stage == "download":
-
-            title = "📥 Downloading..."
-
-            keyboard = download_keyboard()
-
-        else:
-
-            title = "📤 Uploading..."
-
-            keyboard = upload_keyboard()
-
         text = (
-            f"{title}\n\n"
-            f"[{bar}] {percent:.1f}%\n\n"
+            f"{'📥 Downloading File' if stage == 'download' else '📤 Uploading File'}\n\n"
+            f"[{progress_bar(percent)}] {percent:.1f}%\n\n"
             f"📦 {human_size(current)} / {human_size(total)}\n"
             f"⚡ Speed : {human_size(speed)}/s\n"
             f"⏳ ETA : {human_time(eta)}"
         )
 
-        await message.edit_text(
-            text,
-            reply_markup=keyboard
-        )
+        if stage == "download":
+
+            await message.edit_text(
+                text,
+                reply_markup=download_buttons()
+            )
+
+        else:
+
+            await message.edit_text(
+                text,
+                reply_markup=upload_buttons()
+            )
 
     except Exception:
         pass
