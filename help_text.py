@@ -259,7 +259,7 @@ Future Admin Settings
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>📢 OFFICIAL CHANNEL</b>
+<b>📢 JOIN OUR OFFICIAL CHANNEL</b>
 
 https://t.me/Anitoon_edit
 
@@ -268,14 +268,6 @@ https://t.me/Anitoon_edit
 <b>👑 CREATOR</b>
 
 @MonkeyDLuffy_Prince
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>❤️ Powered By</b>
-
-<b>AniToon Edit</b>
-
-https://t.me/Anitoon_edit
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
