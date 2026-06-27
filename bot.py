@@ -2,7 +2,7 @@
 # 🤖 AniToon Bot
 # bot.py (Part 1/5)
 # ==========================================================
-
+print(bot.me)
 import os
 import asyncio
 import threading
@@ -119,7 +119,7 @@ async def start_cmd(client, message):
         message.from_user.id,
         message.from_user.first_name
     )
-
+print(f"/start received from {message.from_user.id}")
     clear_state(message.from_user.id)
 
     text = f"""
@@ -573,7 +573,14 @@ async def receive_file(client, message):
 # RECEIVE TEXT
 # ==========================================================
 
-@bot.on_message(filters.private & filters.text)
+@bot.on_message(filters.private & filters.text & ~filters.command([
+    "start",
+    "help",
+    "about",
+    "ping",
+    "alive",
+    "settings"
+]))
 async def receive_text(client, message):
 
     uid = message.from_user.id
@@ -916,16 +923,11 @@ def run_bot():
     print("=" * 60)
 
     try:
-        print("Starting Pyrogram...")
+        with bot:
+            print(f"Logged in as @{bot.me.username}")
+            idle()
 
-        bot.start()
-
-        print("Pyrogram connected successfully!")
-        print(f"Bot username: @{bot.me.username}")
-
-        idle()
-
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
 
@@ -950,12 +952,6 @@ def run_web():
 # ==========================================================
 # MAIN
 # ==========================================================
-
-if __name__ == "__main__":
-
-    print("=" * 60)
-    print("🚀 AniToon Bot Starting...")
-    print("=" * 60)
 
 if __name__ == "__main__":
 
