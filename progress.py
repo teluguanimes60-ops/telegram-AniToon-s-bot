@@ -1,15 +1,20 @@
 # ==========================================================
-# 🤖 AniToon Bot - Progress System (Production v6)
+# 🤖 AniToon Bot - Progress System (Production V7)
 # ==========================================================
 
 import time
+
 from buttons import download_buttons, upload_buttons
+from states import get_state
 
 # ==========================================================
-# FLOOD PROTECTION
+# FLOOD CONTROL
 # ==========================================================
 
-_LAST_UPDATE = {}
+LAST_UPDATE = {}
+
+UPDATE_INTERVAL = 2
+
 
 # ==========================================================
 # HUMAN SIZE
@@ -17,20 +22,16 @@ _LAST_UPDATE = {}
 
 def human_size(size):
 
-    if not size:
-        return "0 B"
-
-    power = 1024
-    n = 0
-    units = ["B", "KB", "MB", "GB", "TB"]
-
     size = float(size)
 
-    while size >= power and n < len(units) - 1:
-        size /= power
-        n += 1
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
 
-    return f"{size:.2f} {units[n]}"
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+
+        size /= 1024
+
+    return f"{size:.2f} PB"
 
 
 # ==========================================================
@@ -39,7 +40,7 @@ def human_size(size):
 
 def human_time(seconds):
 
-    seconds = int(seconds)
+    seconds = max(int(seconds), 0)
 
     h = seconds // 3600
     m = (seconds % 3600) // 60
@@ -57,9 +58,11 @@ def human_time(seconds):
 
 def progress_bar(percent):
 
-    filled = int(percent / 10)
+    total = 20
 
-    return "█" * filled + "░" * (10 - filled)
+    filled = int(percent / 100 * total)
+
+    return "█" * filled + "░" * (total - filled)
 
 
 # ==========================================================
@@ -70,35 +73,61 @@ async def progress(
     current,
     total,
     message,
-    start_time,
+    start,
     stage="download"
 ):
 
+    state = get_state(message.chat.id)
+
+    # -------------------------
+    # Pause
+    # -------------------------
+
+    while state.get("paused", False):
+        time.sleep(0.5)
+
+    # -------------------------
+    # Cancel
+    # -------------------------
+
+    if state.get("cancelled", False):
+        raise Exception("Job Cancelled")
+
     now = time.time()
 
-    key = message.id
+    if (
+        message.id in LAST_UPDATE
+        and now - LAST_UPDATE[message.id] < UPDATE_INTERVAL
+    ):
+        return
 
-    if key in _LAST_UPDATE:
-        if now - _LAST_UPDATE[key] < 2:
-            return
-
-    _LAST_UPDATE[key] = now
+    LAST_UPDATE[message.id] = now
 
     try:
 
-        elapsed = max(now - start_time, 1)
-
-        percent = (current * 100) / total if total else 0
+        elapsed = max(now - start, 1)
 
         speed = current / elapsed
 
-        eta = (total - current) / speed if speed else 0
+        percent = (current / total) * 100 if total else 0
+
+        eta = (
+            (total - current) / speed
+            if speed > 0 else 0
+        )
+
+        title = (
+            "📥 Downloading..."
+            if stage == "download"
+            else "📤 Uploading..."
+        )
 
         text = (
-            f"{'📥 Downloading File' if stage == 'download' else '📤 Uploading File'}\n\n"
-            f"[{progress_bar(percent)}] {percent:.1f}%\n\n"
+            f"{title}\n\n"
+            f"{progress_bar(percent)}\n\n"
+            f"**{percent:.2f}%**\n\n"
             f"📦 {human_size(current)} / {human_size(total)}\n"
-            f"⚡ Speed : {human_size(speed)}/s\n"
+            f"⚡ {human_size(speed)}/s\n"
             f"⏳ ETA : {human_time(eta)}"
         )
 
