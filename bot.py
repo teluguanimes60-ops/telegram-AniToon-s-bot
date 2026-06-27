@@ -163,7 +163,8 @@ if __name__ == "__main__":
         target=run_bot,
         daemon=True
     ).start()
-
+def run_bot():
+    bot.run()
     # Flask Web Server (Render/Koyeb/Railway)
     app.run(
         host="0.0.0.0",
