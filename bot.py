@@ -113,13 +113,8 @@ def is_owner(user_id: int):
 
 @bot.on_message(filters.private & filters.command("start"))
 async def start_cmd(client, message):
-
-    print(f"/start received from {message.from_user.id}")
-
-    await add_user(
-        message.from_user.id,
-        message.from_user.first_name
-    )
+    print("/start received")
+    await message.reply_text("Bot is working!")
 
     clear_state(message.from_user.id)
 
@@ -886,11 +881,9 @@ async def save_custom_thumb(client, message):
 # UNKNOWN COMMAND
 # ==========================================================
 
-@bot.on_message(
-    filters.private &
-    filters.command(None)
-)
+@bot.on_message(filters.private & filters.command)
 async def unknown(client, message):
+
     await message.reply_text(
         "❌ Unknown command.\n\nUse /start"
     )
