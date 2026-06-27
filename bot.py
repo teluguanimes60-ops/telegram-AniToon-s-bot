@@ -123,22 +123,6 @@ I'm **AniToon Bot**
 
 ━━━━━━━━━━━━━━━━━━
 
-✏ Rename Files
-
-🎬 Convert Files
-
-📝 Instant Edit
-
-📄 Media Information
-
-🖼 Thumbnail Support
-
-📊 Live Progress
-
-👥 Queue System
-
-━━━━━━━━━━━━━━━━━━
-
 Choose an option below.
 """
 
