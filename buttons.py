@@ -21,20 +21,19 @@ def start_buttons(is_owner=False):
 
     rows = [
         [
-            InlineKeyboardButton(
-                "📖 Help",
-                callback_data="help"
-            ),
-            InlineKeyboardButton(
-                "ℹ️ About",
-                callback_data="about"
-            )
+            InlineKeyboardButton("✏️ Rename", callback_data="rename"),
+            InlineKeyboardButton("🎬 Convert", callback_data="convert")
         ],
         [
-            InlineKeyboardButton(
-                "📢 My Channels",
-                url=CHANNEL_URL
-            )
+            InlineKeyboardButton("📝 Instant Edit", callback_data="instant_edit"),
+            InlineKeyboardButton("📄 Media Info", callback_data="media_info")
+        ],
+        [
+            InlineKeyboardButton("📖 Help", callback_data="help"),
+            InlineKeyboardButton("ℹ️ About", callback_data="about")
+        ],
+        [
+            InlineKeyboardButton("📢 My Channels", url=CHANNEL_URL)
         ]
     ]
 
@@ -42,12 +41,11 @@ def start_buttons(is_owner=False):
         rows.append([
             InlineKeyboardButton(
                 "⚙️ Owner Settings",
-                callback_data="owner_settings"
+                callback_data="settings"
             )
         ])
 
     return InlineKeyboardMarkup(rows)
-
 # ==========================================================
 # FILE MENU
 # ==========================================================
