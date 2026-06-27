@@ -194,7 +194,10 @@ async def settings_cmd(client, message):
 
     if not is_owner(message.from_user.id):
 
-        return await message.reply_text(
+        return await send_clean(
+    message,
+    "Your text",
+    reply_markup=
             "❌ Only the Bot Owner can access Settings."
         )
 
@@ -212,7 +215,10 @@ async def settings_cmd(client, message):
 @bot.on_message(filters.private & filters.command("ping"))
 async def ping_cmd(client, message):
 
-    await message.reply_text("🏓 Pong!")
+    await send_clean(
+    message,
+    "Your text",
+    reply_markup="🏓 Pong!")
 
 
 # ==========================================================
@@ -222,7 +228,10 @@ async def ping_cmd(client, message):
 @bot.on_message(filters.private & filters.command("alive"))
 async def alive_cmd(client, message):
 
-    await message.reply_text(
+    await send_clean(
+    message,
+    "Your text",
+    reply_markup=
         "✅ AniToon Bot is Online."
     )
 
@@ -561,7 +570,10 @@ async def receive_file(client, message):
 
     if state.get("mode") == "media_info":
 
-        wait = await message.reply_text("📥 Downloading file...")
+        wait = await send_clean(
+    message,
+    "Your text",
+    reply_markup="📥 Downloading file...")
 
         path = await message.download()
 
@@ -582,13 +594,19 @@ async def receive_file(client, message):
 
     if state.get("mode") not in ["rename", "convert"]:
 
-        return await message.reply_text(
+        return await send_clean(
+    message,
+    "Your text",
+    reply_markup=
             "❌ Select **Rename** or **Convert** from the menu first."
         )
 
     if user_processing(uid):
 
-        return await message.reply_text(
+        return await send_clean(
+    message,
+    "Your text",
+    reply_markup=
             "⚠️ You already have an active job."
         )
 
@@ -610,7 +628,10 @@ async def receive_file(client, message):
         job_id=job_id
     )
 
-    await message.reply_text(
+    await send_clean(
+    message,
+    "Your text",
+    reply_markup=
         "✏️ Send the new filename.\n\n"
         "Example:\n"
         "`One Piece Episode 1135`",
@@ -647,7 +668,10 @@ async def receive_text(client, message):
 
         clear_state(uid)
 
-        return await message.reply_text(msg)
+        return await send_clean(
+    message,
+    "Your text",
+    reply_markup=msg)
 
     # ---------------- WAITING NEW NAME ----------------
 
@@ -658,7 +682,10 @@ async def receive_text(client, message):
 
     if not job:
         clear_state(uid)
-        return await message.reply_text(
+        return await send_clean(
+    message,
+    "Your text",
+    reply_markup=
             "❌ Job expired."
         )
 
@@ -674,7 +701,10 @@ async def receive_text(client, message):
         job_id=state["job_id"]
     )
 
-    await message.reply_text(
+    await send_clean(
+    message,
+    "Your text",
+    reply_markup=
         "🖼 Choose Thumbnail Mode",
         reply_markup=video_thumbnail_buttons()
     )
@@ -897,7 +927,10 @@ async def save_custom_thumb(client, message):
 
     if not job_id:
         clear_state(uid)
-        return await message.reply_text("❌ Job expired.")
+        return await send_clean(
+    message,
+    "Your text",
+    reply_markup="❌ Job expired.")
 
     from thumbnail import save_thumb
 
@@ -911,7 +944,10 @@ async def save_custom_thumb(client, message):
 
     clear_state(uid)
 
-    await message.reply_text(
+    await send_clean(
+    message,
+    "Your text",
+    reply_markup=
         "✅ Custom Thumbnail Saved.\n\n"
         "📥 Added to Queue..."
     )
@@ -937,7 +973,10 @@ async def save_custom_thumb(client, message):
 @bot.on_message(filters.private & filters.command)
 async def unknown(client, message):
 
-    await message.reply_text(
+    await send_clean(
+    message,
+    "Your text",
+    reply_markup=
         "❌ Unknown command.\n\nUse /start"
     )
 
