@@ -9,7 +9,7 @@ import threading
 
 from flask import Flask
 
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 from pyrogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
@@ -916,10 +916,18 @@ def run_bot():
     print("=" * 60)
 
     try:
-        bot.run()
+        print("Starting Pyrogram...")
+
+        bot.start()
+
+        print("Pyrogram connected successfully!")
+        print(f"Bot username: @{bot.me.username}")
+
+        idle()
+
     except Exception as e:
-        print("BOT ERROR:")
-        print(e)
+        import traceback
+        traceback.print_exc()
 
 # ==========================================================
 # FLASK SERVER
