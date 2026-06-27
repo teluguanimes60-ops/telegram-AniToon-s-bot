@@ -878,7 +878,7 @@ async def save_custom_thumb(client, message):
 # UNKNOWN COMMAND
 # ==========================================================
 
-@bot.on_message(filters.private & filters.command(None))
+@bot.on_message(filters.private & ~filters.command(["start", "help"]))
 async def unknown(client, message):
 
     await message.reply_text(
