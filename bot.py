@@ -744,3 +744,246 @@ async def start_processing(job_id):
         f"📢 Subscribe before processing:\n"
         f"{CHANNEL_POST}"
     )
+
+# ==========================================================
+# 🤖 AniToon Bot
+# bot.py (Part 4/5)
+# ==========================================================
+
+from thumbnail import save_thumb
+from db import set_setting
+
+# ==========================================================
+# PAUSE
+# ==========================================================
+
+@bot.on_callback_query(filters.regex("^pause$"))
+async def pause_callback(client, query):
+
+    uid = query.from_user.id
+
+    set_state(uid, paused=True)
+
+    await query.answer(
+        "⏸ Download Paused",
+        show_alert=True
+    )
+
+
+# ==========================================================
+# RESUME
+# ==========================================================
+
+@bot.on_callback_query(filters.regex("^resume$"))
+async def resume_callback(client, query):
+
+    uid = query.from_user.id
+
+    set_state(uid, paused=False)
+
+    await query.answer(
+        "▶ Download Resumed",
+        show_alert=True
+    )
+
+
+# ==========================================================
+# CANCEL
+# ==========================================================
+
+@bot.on_callback_query(filters.regex("^(cancel|cancel_job)$"))
+async def cancel_callback(client, query):
+
+    uid = query.from_user.id
+
+    state = get_state(uid)
+
+    if "job_id" in state:
+        delete_job(state["job_id"])
+
+    clear_state(uid)
+
+    await query.message.edit_text(
+        "❌ Job Cancelled Successfully."
+    )
+
+    await query.answer()
+
+
+# ==========================================================
+# OWNER SETTINGS
+# ==========================================================
+
+@bot.on_callback_query(filters.regex("^settings_thumb$"))
+async def owner_thumb(client, query):
+
+    if not is_owner(query.from_user.id):
+        return await query.answer(
+            "Owner Only",
+            show_alert=True
+        )
+
+    await query.message.edit_text(
+        "🖼 Default Thumbnail Settings\n\n"
+        "Choose the default thumbnail mode.",
+        reply_markup=thumbnail_buttons()
+    )
+
+    await query.answer()
+
+
+@bot.on_callback_query(filters.regex("^settings_clean$"))
+async def owner_clean(client, query):
+
+    if not is_owner(query.from_user.id):
+        return await query.answer(
+            "Owner Only",
+            show_alert=True
+        )
+
+    await set_setting(
+        query.from_user.id,
+        "auto_clean",
+        True
+    )
+
+    await query.answer(
+        "✅ Auto Cleaner Enabled",
+        show_alert=True
+    )
+
+
+# ==========================================================
+# SAVE CUSTOM THUMBNAIL
+# ==========================================================
+
+@bot.on_message(filters.private & filters.photo)
+async def save_custom_thumb(client, message):
+
+    uid = message.from_user.id
+
+    state = get_state(uid)
+
+    if state.get("step") != "waiting_custom_thumb":
+        return
+
+    await save_thumb(
+        uid,
+        message.photo.file_id
+    )
+
+    job_id = state["job_id"]
+
+    update_job(
+        job_id,
+        "thumb_mode",
+        "saved"
+    )
+
+    clear_state(uid)
+
+    await message.reply_text(
+        "✅ Custom Thumbnail Saved.\n\n"
+        "Processing Started..."
+    )
+
+    await add_to_queue({
+        "uid": uid,
+        "handler": lambda: process_pipeline(
+            job_id,
+            get_job(job_id)["original_message"],
+            bot
+        )
+    })
+
+
+# ==========================================================
+# UNKNOWN COMMAND
+# ==========================================================
+
+@bot.on_message(filters.private & filters.command(None))
+async def unknown(client, message):
+
+    await message.reply_text(
+        "❌ Unknown command.\n\n"
+        "Use /start"
+    )
+
+# ==========================================================
+# 🤖 AniToon Bot
+# bot.py (Part 5/5)
+# Startup & Render Server
+# ==========================================================
+
+# ==========================================================
+# QUEUE THREAD
+# ==========================================================
+
+def run_queue():
+
+    loop = asyncio.new_event_loop()
+
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        start_queue()
+    )
+
+
+# ==========================================================
+# TELEGRAM BOT
+# ==========================================================
+
+def run_bot():
+
+    print("=" * 60)
+    print("🤖 Telegram Bot Started")
+    print("=" * 60)
+
+    bot.run()
+
+
+# ==========================================================
+# FLASK SERVER
+# ==========================================================
+
+def run_web():
+
+    print("=" * 60)
+    print(f"🌐 Web Server Running : {PORT}")
+    print("=" * 60)
+
+    app.run(
+        host="0.0.0.0",
+        port=PORT,
+        debug=False,
+        use_reloader=False
+    )
+
+
+# ==========================================================
+# MAIN
+# ==========================================================
+
+if __name__ == "__main__":
+
+    print("=" * 60)
+    print("🚀 AniToon Bot Starting...")
+    print("=" * 60)
+
+    # Queue Thread
+    queue_thread = threading.Thread(
+        target=run_queue,
+        daemon=True
+    )
+    queue_thread.start()
+
+    # Telegram Thread
+    bot_thread = threading.Thread(
+        target=run_bot,
+        daemon=True
+    )
+    bot_thread.start()
+
+    # Flask (Main Thread)
+    run_web()
