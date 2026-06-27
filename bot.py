@@ -1,6 +1,5 @@
 # ==========================================================
 # 🤖 AniToon Bot
-# bot.py (Part 1/5)
 # ==========================================================
 import os
 import asyncio
@@ -114,7 +113,6 @@ def is_owner(user_id: int):
 @bot.on_message(filters.private & filters.command("start"))
 async def start_cmd(client, message):
     print("/start received")
-    await message.reply_text("Bot is working!")
 
     clear_state(message.from_user.id)
 
