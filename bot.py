@@ -20,10 +20,11 @@ from buttons import (
     start_buttons,
     help_buttons,
     about_buttons,
-    settings_buttons,
+    owner_settings_buttons,
     file_buttons,
     convert_buttons,
-    thumbnail_buttons
+    video_thumbnail_buttons,
+    document_thumbnail_buttons
 )
 
 from help_text import HELP_TEXT
@@ -222,7 +223,7 @@ async def settings_cmd(client, message):
     await send_clean(
         message,
         "⚙ **Owner Settings**",
-        reply_markup=settings_buttons()
+        reply_markup=owner_settings_buttons()
     )
 
 
@@ -362,7 +363,7 @@ async def settings_callback(client, query):
 
     await query.message.edit_text(
         "⚙ **Owner Settings**",
-        reply_markup=settings_buttons()
+        reply_markup=owner_settings_buttons()
     )
 
     await query.answer()
@@ -619,7 +620,7 @@ async def receive_text(client, message):
 
     await message.reply_text(
         "🖼 Choose Thumbnail Mode",
-        reply_markup=thumbnail_buttons()
+        reply_markup=video_thumbnail_buttons()
     )
 
 
@@ -796,7 +797,7 @@ async def owner_thumb(client, query):
     await query.message.edit_text(
         "🖼 Default Thumbnail Settings\n\n"
         "Choose the default thumbnail mode.",
-        reply_markup=thumbnail_buttons()
+        reply_markup=document_thumbnail_buttons()
     )
 
     await query.answer()
