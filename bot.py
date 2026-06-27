@@ -704,7 +704,6 @@ async def receive_text(client, message):
     await send_clean(
     message,
     "Your text",
-    reply_markup=
         "🖼 Choose Thumbnail Mode",
         reply_markup=video_thumbnail_buttons()
     )
