@@ -8,24 +8,37 @@ from db import (
 )
 
 
-async def save_thumb(user_id, file_id):
+# ==========================================================
+# SAVE THUMBNAIL
+# ==========================================================
+
+async def save_thumb(client, user_id, file_id):
     await save_thumbnail(user_id, file_id)
+    return True
 
 
-async def get_thumb(client=None,
-                    user_id=None,
-                    mode="auto",
-                    auto_path=None):
+# ==========================================================
+# GET THUMBNAIL
+# ==========================================================
 
+async def get_thumb(
+    client=None,
+    user_id=None,
+    mode="auto",
+    auto_path=None
+):
+
+    # No thumbnail
     if mode == "none":
         return None
 
-    # --------------------------
-    # Custom Thumbnail
-    # --------------------------
+    # -------------------------
+    # Saved Thumbnail
+    # -------------------------
+
     if mode == "saved":
 
-        if not client:
+        if client is None:
             return None
 
         file_id = await db_get_thumbnail(user_id)
@@ -37,19 +50,24 @@ async def get_thumb(client=None,
             suffix=".jpg",
             delete=False
         )
-
         tmp.close()
 
-        await client.download_media(
-            file_id,
-            file_name=tmp.name
-        )
+        try:
+            await client.download_media(
+                file_id=file_id,
+                file_name=tmp.name
+            )
+        except Exception:
+            if os.path.exists(tmp.name):
+                os.remove(tmp.name)
+            return None
 
         return tmp.name
 
-    # --------------------------
+    # -------------------------
     # Auto Thumbnail
-    # --------------------------
+    # -------------------------
+
     if mode == "auto":
 
         if not auto_path:
@@ -60,12 +78,16 @@ async def get_thumb(client=None,
     return None
 
 
-def generate_auto_thumb(video):
+# ==========================================================
+# AUTO THUMBNAIL
+# ==========================================================
 
-    if not os.path.exists(video):
+def generate_auto_thumb(video_path):
+
+    if not os.path.exists(video_path):
         return None
 
-    thumb = video + "_thumb.jpg"
+    thumb = video_path + "_thumb.jpg"
 
     cmd = [
         "ffmpeg",
@@ -73,29 +95,40 @@ def generate_auto_thumb(video):
         "-ss",
         "00:00:03",
         "-i",
-        video,
+        video_path,
         "-frames:v",
         "1",
+        "-q:v",
+        "2",
         thumb
     ]
 
-    subprocess.run(
-        cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
+    try:
+
+        subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True
+        )
+
+    except Exception:
+        return None
 
     if os.path.exists(thumb):
         return thumb
 
     return None
-    
-import os
 
+
+# ==========================================================
+# DELETE AUTO THUMBNAIL
+# ==========================================================
 
 def delete_auto_thumb(path):
+
     try:
         if path and os.path.exists(path):
             os.remove(path)
-    except:
+    except Exception:
         pass
