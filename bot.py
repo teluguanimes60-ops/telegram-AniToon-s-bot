@@ -915,7 +915,18 @@ def run_bot():
     print("🤖 Telegram Bot Started")
     print("=" * 60)
 
-    bot.run()
+    try:
+        bot.start()
+        print("✅ Bot logged into Telegram successfully")
+
+        import pyrogram
+        pyrogram.idle()
+
+    except Exception as e:
+        print("BOT ERROR:", e)
+
+    finally:
+        bot.stop()
 
 # ==========================================================
 # FLASK SERVER
