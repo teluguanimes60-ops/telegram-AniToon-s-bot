@@ -364,7 +364,20 @@ async def rename_callback(client, query):
 
     await query.message.edit_text(
         "📤 Send the file you want to rename.",
-        reply_markup=file_buttons()
+        reply_markup=InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton(
+            "⬅️ Back",
+            callback_data="home"
+        )
+    ],
+    [
+        InlineKeyboardButton(
+            "❌ Cancel",
+            callback_data="cancel"
+        )
+    ]
+])
     )
 
     await query.answer()
@@ -392,7 +405,65 @@ async def convert_callback(client, query):
 
     await query.answer()
 
+@bot.on_callback_query(filters.regex("^convert_video$"))
+async def convert_video(client, query):
 
+    uid = query.from_user.id
+
+    set_state(
+        uid,
+        mode="convert",
+        convert_type="video",
+        step="waiting_file"
+    )
+
+    await query.message.edit_text(
+        "📤 Send the video file.",
+        reply_markup=file_buttons()
+    )
+
+    await query.answer()
+
+
+@bot.on_callback_query(filters.regex("^convert_document$"))
+async def convert_document(client, query):
+
+    uid = query.from_user.id
+
+    set_state(
+        uid,
+        mode="convert",
+        convert_type="document",
+        step="waiting_file"
+    )
+
+    await query.message.edit_text(
+        "📤 Send the file.",
+        reply_markup=file_buttons()
+    )
+
+    await query.answer()
+
+
+@bot.on_callback_query(filters.regex("^convert_audio$"))
+async def convert_audio(client, query):
+
+    uid = query.from_user.id
+
+    set_state(
+        uid,
+        mode="convert",
+        convert_type="audio",
+        step="waiting_file"
+    )
+
+    await query.message.edit_text(
+        "📤 Send the audio/video.",
+        reply_markup=file_buttons()
+    )
+
+    await query.answer()
+    
 # ==========================================================
 # INSTANT EDIT
 # ==========================================================
