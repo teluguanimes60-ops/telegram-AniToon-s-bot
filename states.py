@@ -248,3 +248,21 @@ def total_states():
 def get_all_states():
 
     return USER_STATES
+
+# ==========================================================
+# COMPATIBILITY FUNCTIONS
+# ==========================================================
+
+def set_state(user_id: int, **kwargs):
+    """
+    Compatibility wrapper for bot.py
+    """
+    return update_state(user_id, **kwargs)
+
+
+def clear_state(user_id: int):
+    """
+    Compatibility wrapper for bot.py
+    """
+    reset_state(user_id)
+    create_state(user_id)
