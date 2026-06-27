@@ -1,188 +1,345 @@
 # ==========================================================
-# 🤖 AniToon's Bot - Production Buttons v2
+# 🤖 AniToon Bot - Buttons (Project V5)
 # ==========================================================
 
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
+)
 
 # ==========================================================
-# CHANGE THIS
+# CHANGE THESE
 # ==========================================================
 
-CHANNEL_URL = "https://t.me/YOUR_CHANNEL"
+CHANNEL_URL = "https://t.me/Anitoon_edit/33"
 
 # ==========================================================
-# 🏠 START MENU
+# START MENU
 # ==========================================================
 
-def start_buttons():
+def start_buttons(is_owner=False):
 
-    return InlineKeyboardMarkup([
+    rows = [
         [
-            InlineKeyboardButton("📖 Help", callback_data="help"),
-            InlineKeyboardButton("⚙️ Settings", callback_data="settings")
+            InlineKeyboardButton(
+                "📖 Help",
+                callback_data="help"
+            ),
+            InlineKeyboardButton(
+                "ℹ️ About",
+                callback_data="about"
+            )
         ],
         [
-            InlineKeyboardButton("📢 My Channels", url=CHANNEL_URL)
-        ],
-        [
-            InlineKeyboardButton("ℹ️ About", callback_data="about")
+            InlineKeyboardButton(
+                "📢 My Channels",
+                url=CHANNEL_URL
+            )
         ]
-    ])
+    ]
 
+    if is_owner:
+        rows.append([
+            InlineKeyboardButton(
+                "⚙️ Owner Settings",
+                callback_data="owner_settings"
+            )
+        ])
+
+    return InlineKeyboardMarkup(rows)
 
 # ==========================================================
-# 📂 FILE MENU
+# FILE MENU
 # ==========================================================
 
 def file_buttons():
 
     return InlineKeyboardMarkup([
+
         [
-            InlineKeyboardButton("✏️ Rename", callback_data="rename")
+            InlineKeyboardButton(
+                "✏️ Rename",
+                callback_data="rename"
+            )
         ],
+
         [
-            InlineKeyboardButton("🎬 Convert", callback_data="convert")
+            InlineKeyboardButton(
+                "🎬 Convert",
+                callback_data="convert"
+            )
         ],
+
         [
-            InlineKeyboardButton("📝 Instant Edit", callback_data="instant_edit")
+            InlineKeyboardButton(
+                "📝 Instant Edit",
+                callback_data="instant_edit"
+            )
         ],
+
         [
-            InlineKeyboardButton("📄 Media Info", callback_data="media_info")
+            InlineKeyboardButton(
+                "📄 Media Info",
+                callback_data="media_info"
+            )
         ],
+
         [
-            InlineKeyboardButton("❌ Cancel", callback_data="cancel")
+            InlineKeyboardButton(
+                "❌ Cancel",
+                callback_data="cancel"
+            )
         ]
     ])
 
-
 # ==========================================================
-# 🎬 CONVERT MENU
+# CONVERT MENU
 # ==========================================================
 
 def convert_buttons():
 
     return InlineKeyboardMarkup([
+
         [
-            InlineKeyboardButton("🎥 Video", callback_data="convert_video")
+            InlineKeyboardButton(
+                "🎥 Video",
+                callback_data="convert_video"
+            )
         ],
+
         [
-            InlineKeyboardButton("📄 Document", callback_data="convert_document")
+            InlineKeyboardButton(
+                "📄 Document",
+                callback_data="convert_document"
+            )
         ],
+
         [
-            InlineKeyboardButton("🎵 Audio", callback_data="convert_audio")
+            InlineKeyboardButton(
+                "🎵 Audio",
+                callback_data="convert_audio"
+            )
         ],
+
         [
-            InlineKeyboardButton("⬅️ Back", callback_data="back_file")
+            InlineKeyboardButton(
+                "⬅️ Back",
+                callback_data="back_file"
+            )
         ]
     ])
 
-
 # ==========================================================
-# 🖼 THUMBNAIL MENU
+# VIDEO THUMBNAIL
+# (NO WITHOUT THUMB)
 # ==========================================================
 
-def thumbnail_buttons():
+def video_thumbnail_buttons():
 
     return InlineKeyboardMarkup([
+
         [
-            InlineKeyboardButton("🖼 Custom Thumbnail", callback_data="thumb_custom")
+            InlineKeyboardButton(
+                "🖼 Custom Thumbnail",
+                callback_data="thumb_custom"
+            )
         ],
+
         [
-            InlineKeyboardButton("🤖 Auto Thumbnail", callback_data="thumb_auto")
+            InlineKeyboardButton(
+                "🤖 Auto Thumbnail",
+                callback_data="thumb_auto"
+            )
         ],
+
         [
-            InlineKeyboardButton("🚫 Without Thumbnail", callback_data="thumb_none")
-        ],
-        [
-            InlineKeyboardButton("⬅️ Back", callback_data="back_convert"),
-            InlineKeyboardButton("✅ Continue", callback_data="thumb_continue")
+            InlineKeyboardButton(
+                "⬅️ Back",
+                callback_data="back_convert"
+            ),
+
+            InlineKeyboardButton(
+                "✅ Continue",
+                callback_data="thumb_continue"
+            )
         ]
     ])
 
+# ==========================================================
+# DOCUMENT THUMBNAIL
+# ==========================================================
+
+def document_thumbnail_buttons():
+
+    return InlineKeyboardMarkup([
+
+        [
+            InlineKeyboardButton(
+                "🖼 Custom Thumbnail",
+                callback_data="thumb_custom"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🤖 Auto Thumbnail",
+                callback_data="thumb_auto"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🚫 Without Thumbnail",
+                callback_data="thumb_none"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⬅️ Back",
+                callback_data="back_convert"
+            ),
+
+            InlineKeyboardButton(
+                "✅ Continue",
+                callback_data="thumb_continue"
+            )
+        ]
+    ])
 
 # ==========================================================
-# ⬇ DOWNLOAD BUTTONS
+# DOWNLOAD BUTTONS
 # ==========================================================
 
 def download_buttons():
 
     return InlineKeyboardMarkup([
+
         [
-            InlineKeyboardButton("⏸ Pause", callback_data="pause"),
-            InlineKeyboardButton("▶ Resume", callback_data="resume")
+            InlineKeyboardButton(
+                "⏸ Pause",
+                callback_data="pause"
+            ),
+
+            InlineKeyboardButton(
+                "▶ Resume",
+                callback_data="resume"
+            )
         ],
+
         [
-            InlineKeyboardButton("❌ Cancel", callback_data="cancel_job")
+            InlineKeyboardButton(
+                "❌ Cancel",
+                callback_data="cancel_job"
+            )
         ],
+
         [
-            InlineKeyboardButton("📢 My Channels", url=CHANNEL_URL)
+            InlineKeyboardButton(
+                "📢 My Channels",
+                url=CHANNEL_URL
+            )
         ]
     ])
 
-
 # ==========================================================
-# ⬆ UPLOAD BUTTONS
+# UPLOAD BUTTONS
 # ==========================================================
 
 def upload_buttons():
 
     return InlineKeyboardMarkup([
+
         [
-            InlineKeyboardButton("❌ Cancel", callback_data="cancel_job")
+            InlineKeyboardButton(
+                "❌ Cancel",
+                callback_data="cancel_job"
+            )
         ],
+
         [
-            InlineKeyboardButton("📢 My Channels", url=CHANNEL_URL)
+            InlineKeyboardButton(
+                "📢 My Channels",
+                url=CHANNEL_URL
+            )
         ]
     ])
 
-
 # ==========================================================
-# ⚙ SETTINGS
-# ==========================================================
-
-def settings_buttons():
-
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🖼 Thumbnail", callback_data="settings_thumb")
-        ],
-        [
-            InlineKeyboardButton("🧹 Cleaner", callback_data="settings_clean")
-        ],
-        [
-            InlineKeyboardButton("⬅️ Back", callback_data="home")
-        ]
-    ])
-
-
-# ==========================================================
-# 📖 HELP
+# HELP
 # ==========================================================
 
 def help_buttons():
 
     return InlineKeyboardMarkup([
+
         [
-            InlineKeyboardButton("⬅️ Back", callback_data="home")
+            InlineKeyboardButton(
+                "⬅️ Back",
+                callback_data="home"
+            )
         ]
     ])
 
-
 # ==========================================================
-# ℹ ABOUT
+# ABOUT
 # ==========================================================
 
 def about_buttons():
 
     return InlineKeyboardMarkup([
+
         [
-            InlineKeyboardButton("📢 My Channels", url=CHANNEL_URL)
+            InlineKeyboardButton(
+                "📢 My Channels",
+                url=CHANNEL_URL
+            )
         ],
+
         [
-            InlineKeyboardButton("⬅️ Back", callback_data="home")
+            InlineKeyboardButton(
+                "⬅️ Back",
+                callback_data="home"
+            )
         ]
     ])
 
+# ==========================================================
+# OWNER SETTINGS
+# ==========================================================
+
+def owner_settings_buttons():
+
+    return InlineKeyboardMarkup([
+
+        [
+            InlineKeyboardButton(
+                "👥 Max Active Users",
+                callback_data="set_max_users"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📢 Channels",
+                callback_data="set_channels"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🧹 Cleaner",
+                callback_data="toggle_cleaner"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⬅️ Back",
+                callback_data="home"
+            )
+        ]
+    ])
 
 # ==========================================================
 # SIMPLE BACK
@@ -191,7 +348,11 @@ def about_buttons():
 def back_button():
 
     return InlineKeyboardMarkup([
+
         [
-            InlineKeyboardButton("⬅️ Back", callback_data="home")
+            InlineKeyboardButton(
+                "⬅️ Back",
+                callback_data="home"
+            )
         ]
     ])
