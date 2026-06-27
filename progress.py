@@ -1,64 +1,125 @@
 # ==========================================================
-# 🤖 AniToon's Bot - Production Progress System
+# 🤖 AniToon Bot - Progress System (Production v5)
 # ==========================================================
 
 import time
 
-from buttons import download_buttons, upload_buttons
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# ----------------------------------------------------------
-# Prevent FloodWait by limiting edit frequency
-# ----------------------------------------------------------
+# ==========================================================
+# CHANNEL
+# ==========================================================
+
+CHANNEL_URL = "https://t.me/Anitoon_edit/33"
+
+# ==========================================================
+# FLOOD PROTECTION
+# ==========================================================
 
 _LAST_UPDATE = {}
 
+# ==========================================================
+# HUMAN SIZE
+# ==========================================================
 
-# ----------------------------------------------------------
-# Human Readable Size
-# ----------------------------------------------------------
+def human_size(size):
 
-def human_bytes(size):
-
-    if size is None:
+    if not size:
         return "0 B"
-
-    size = float(size)
 
     units = ["B", "KB", "MB", "GB", "TB"]
 
-    power = 1024
+    size = float(size)
 
-    n = 0
+    i = 0
 
-    while size >= power and n < len(units) - 1:
-        size /= power
-        n += 1
+    while size >= 1024 and i < len(units) - 1:
+        size /= 1024
+        i += 1
 
-    return f"{size:.2f} {units[n]}"
+    return f"{size:.2f} {units[i]}"
 
-
-# ----------------------------------------------------------
-# ETA Format
-# ----------------------------------------------------------
+# ==========================================================
+# ETA
+# ==========================================================
 
 def human_time(seconds):
 
     seconds = int(seconds)
 
-    m, s = divmod(seconds, 60)
-
-    h, m = divmod(m, 60)
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
 
     if h:
         return f"{h:02}:{m:02}:{s:02}"
 
     return f"{m:02}:{s:02}"
 
+# ==========================================================
+# PROGRESS BAR
+# ==========================================================
 
-# ----------------------------------------------------------
-# Progress Callback
-# stage = download / upload
-# ----------------------------------------------------------
+def progress_bar(percent):
+
+    filled = int(percent / 10)
+
+    return "█" * filled + "░" * (10 - filled)
+
+# ==========================================================
+# DOWNLOAD BUTTONS
+# ==========================================================
+
+def download_keyboard():
+
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "⏸ Pause",
+                callback_data="pause"
+            ),
+            InlineKeyboardButton(
+                "▶ Resume",
+                callback_data="resume"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "❌ Cancel",
+                callback_data="cancel_job"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📢 My Channels",
+                url=CHANNEL_URL
+            )
+        ]
+    ])
+
+# ==========================================================
+# UPLOAD BUTTONS
+# ==========================================================
+
+def upload_keyboard():
+
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "❌ Cancel",
+                callback_data="cancel_job"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📢 My Channels",
+                url=CHANNEL_URL
+            )
+        ]
+    ])
+
+# ==========================================================
+# MAIN CALLBACK
+# ==========================================================
 
 async def progress(
     current,
@@ -81,38 +142,33 @@ async def progress(
 
     try:
 
-        elapsed = now - start_time
+        elapsed = max(now - start_time, 1)
 
-        if elapsed <= 0:
-            elapsed = 1
-
-        percent = current * 100 / total
+        percent = current * 100 / total if total else 0
 
         speed = current / elapsed
 
         eta = (total - current) / speed if speed else 0
 
-        filled = int(percent / 10)
-
-        bar = "█" * filled + "░" * (10 - filled)
+        bar = progress_bar(percent)
 
         if stage == "download":
 
-            title = "📥 Downloading File"
+            title = "📥 Downloading..."
 
-            keyboard = download_buttons()
+            keyboard = download_keyboard()
 
         else:
 
-            title = "📤 Uploading File"
+            title = "📤 Uploading..."
 
-            keyboard = upload_buttons()
+            keyboard = upload_keyboard()
 
         text = (
             f"{title}\n\n"
             f"[{bar}] {percent:.1f}%\n\n"
-            f"📦 {human_bytes(current)} / {human_bytes(total)}\n"
-            f"⚡ Speed : {human_bytes(speed)}/s\n"
+            f"📦 {human_size(current)} / {human_size(total)}\n"
+            f"⚡ Speed : {human_size(speed)}/s\n"
             f"⏳ ETA : {human_time(eta)}"
         )
 
