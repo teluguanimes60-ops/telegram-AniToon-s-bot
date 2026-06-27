@@ -1,5 +1,5 @@
 # ==========================================================
-# 🤖 AniToon Bot - User State Engine (Project V5)
+# 🤖 AniToon Bot - User State Engine (Production V7)
 # ==========================================================
 
 import time
@@ -11,35 +11,27 @@ import time
 USER_STATES = {}
 
 # ==========================================================
-# DEFAULT STATE
+# DEFAULT
 # ==========================================================
 
 DEFAULT_STATE = {
-
     "mode": None,
-
     "step": None,
-
     "status": "idle",
 
     "rename_to": None,
-
     "convert_mode": None,
 
     "thumb_mode": "auto",
-
     "thumb_file_id": None,
 
     "processing": False,
-
     "paused": False,
-
     "cancelled": False,
 
     "queue": False,
 
     "progress_message": None,
-
     "original_message": None,
 
     "job_id": None,
@@ -48,22 +40,24 @@ DEFAULT_STATE = {
 }
 
 # ==========================================================
-# CREATE STATE
+# CREATE
 # ==========================================================
 
-def create_state(user_id: int):
+def create_state(user_id):
 
-    USER_STATES[user_id] = DEFAULT_STATE.copy()
+    state = DEFAULT_STATE.copy()
 
-    USER_STATES[user_id]["created"] = time.time()
+    state["created"] = time.time()
 
-    return USER_STATES[user_id]
+    USER_STATES[user_id] = state
+
+    return state
 
 # ==========================================================
-# GET STATE
+# GET
 # ==========================================================
 
-def get_state(user_id: int):
+def get_state(user_id):
 
     if user_id not in USER_STATES:
         create_state(user_id)
@@ -74,7 +68,7 @@ def get_state(user_id: int):
 # UPDATE
 # ==========================================================
 
-def update_state(user_id: int, **kwargs):
+def update_state(user_id, **kwargs):
 
     state = get_state(user_id)
 
@@ -83,75 +77,130 @@ def update_state(user_id: int, **kwargs):
     return state
 
 # ==========================================================
-# SET MODE
+# BOT COMPATIBILITY
 # ==========================================================
 
-def set_mode(user_id: int, mode: str):
+def set_state(user_id, **kwargs):
+    return update_state(user_id, **kwargs)
 
-    update_state(
-        user_id,
-        mode=mode
-    )
+
+def clear_state(user_id):
+
+    USER_STATES.pop(user_id, None)
+
+    create_state(user_id)
 
 # ==========================================================
-# GET MODE
+# MODE
 # ==========================================================
 
-def get_mode(user_id: int):
+def set_mode(user_id, mode):
+    update_state(user_id, mode=mode)
 
+
+def get_mode(user_id):
     return get_state(user_id)["mode"]
 
 # ==========================================================
-# SET STEP
+# STEP
 # ==========================================================
 
-def set_step(user_id: int, step: str):
+def set_step(user_id, step):
+    update_state(user_id, step=step)
 
-    update_state(
-        user_id,
-        step=step
-    )
 
-# ==========================================================
-# GET STEP
-# ==========================================================
-
-def get_step(user_id: int):
-
+def get_step(user_id):
     return get_state(user_id)["step"]
 
 # ==========================================================
-# START PROCESS
+# JOB
 # ==========================================================
 
-def start_processing(user_id: int):
+def set_job(user_id, job_id):
+    update_state(user_id, job_id=job_id)
+
+
+def get_job(user_id):
+    return get_state(user_id)["job_id"]
+
+# ==========================================================
+# RENAME
+# ==========================================================
+
+def set_rename(user_id, name):
+    update_state(user_id, rename_to=name)
+
+
+def get_rename(user_id):
+    return get_state(user_id)["rename_to"]
+
+# ==========================================================
+# CONVERT
+# ==========================================================
+
+def set_convert(user_id, mode):
+    update_state(user_id, convert_mode=mode)
+
+
+def get_convert(user_id):
+    return get_state(user_id)["convert_mode"]
+
+# ==========================================================
+# THUMBNAIL
+# ==========================================================
+
+def set_thumb_mode(user_id, mode):
+    update_state(user_id, thumb_mode=mode)
+
+
+def get_thumb_mode(user_id):
+    return get_state(user_id)["thumb_mode"]
+
+# ==========================================================
+# PROCESS
+# ==========================================================
+
+def start_processing(user_id):
 
     update_state(
         user_id,
         processing=True,
-        status="processing",
         paused=False,
-        cancelled=False
+        cancelled=False,
+        status="processing"
     )
 
-# ==========================================================
-# FINISH PROCESS
-# ==========================================================
 
-def finish_processing(user_id: int):
+def finish_processing(user_id):
 
     update_state(
         user_id,
         processing=False,
-        status="completed",
-        paused=False
+        paused=False,
+        cancelled=False,
+        status="completed"
     )
 
-# ==========================================================
-# CANCEL
-# ==========================================================
 
-def cancel_processing(user_id: int):
+def pause_processing(user_id):
+
+    update_state(
+        user_id,
+        paused=True,
+        status="paused"
+    )
+
+
+def resume_processing(user_id):
+
+    update_state(
+        user_id,
+        paused=False,
+        status="processing"
+    )
+
+
+def cancel_processing(user_id):
 
     update_state(
         user_id,
@@ -161,108 +210,77 @@ def cancel_processing(user_id: int):
     )
 
 # ==========================================================
-# PAUSE
+# FLAGS
 # ==========================================================
 
-def pause_processing(user_id: int):
-
-    update_state(
-        user_id,
-        paused=True,
-        status="paused"
-    )
-
-# ==========================================================
-# RESUME
-# ==========================================================
-
-def resume_processing(user_id: int):
-
-    update_state(
-        user_id,
-        paused=False,
-        status="processing"
-    )
-
-# ==========================================================
-# CHECKS
-# ==========================================================
-
-def is_processing(user_id: int):
-
+def is_processing(user_id):
     return get_state(user_id)["processing"]
 
 
-def is_paused(user_id: int):
-
+def is_paused(user_id):
     return get_state(user_id)["paused"]
 
 
-def is_cancelled(user_id: int):
-
+def is_cancelled(user_id):
     return get_state(user_id)["cancelled"]
 
 # ==========================================================
-# RESET
+# QUEUE
 # ==========================================================
 
-def reset_state(user_id: int):
+def set_queue(user_id, value=True):
+    update_state(user_id, queue=value)
 
-    if user_id in USER_STATES:
-        del USER_STATES[user_id]
+
+def in_queue(user_id):
+    return get_state(user_id)["queue"]
 
 # ==========================================================
-# CLEAN OLD STATES
+# MESSAGES
+# ==========================================================
+
+def set_progress_message(user_id, msg):
+    update_state(user_id, progress_message=msg)
+
+
+def get_progress_message(user_id):
+    return get_state(user_id)["progress_message"]
+
+
+def set_original_message(user_id, msg):
+    update_state(user_id, original_message=msg)
+
+
+def get_original_message(user_id):
+    return get_state(user_id)["original_message"]
+
+# ==========================================================
+# CLEANUP
 # ==========================================================
 
 def cleanup_old_states(max_age=86400):
 
     now = time.time()
 
-    remove = []
+    deleted = 0
 
-    for uid, state in USER_STATES.items():
+    for uid in list(USER_STATES.keys()):
 
-        if now - state.get("created", now) > max_age:
+        if now - USER_STATES[uid]["created"] > max_age:
 
-            remove.append(uid)
+            USER_STATES.pop(uid)
 
-    for uid in remove:
+            deleted += 1
 
-        USER_STATES.pop(uid, None)
-
-    return len(remove)
-
-# ==========================================================
-# TOTAL USERS
-# ==========================================================
-
-def total_states():
-
-    return len(USER_STATES)
+    return deleted
 
 # ==========================================================
 # DEBUG
 # ==========================================================
 
+def total_states():
+    return len(USER_STATES)
+
+
 def get_all_states():
-
     return USER_STATES
-
-# ==========================================================
-# COMPATIBILITY FUNCTIONS
-# ==========================================================
-
-def set_state(user_id: int, **kwargs):
-    """
-    Compatibility wrapper for bot.py
-    """
-    return update_state(user_id, **kwargs)
-
-
-def clear_state(user_id: int):
-    """
-    Compatibility wrapper for bot.py
-    """
-    reset_state(user_id)
-    create_state(user_id)
