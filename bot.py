@@ -1,41 +1,86 @@
 # ==========================================================
 # 🤖 AniToon Bot
-# Main Entry Point (Part 1/3)
+# Main Bot (Part 1/3)
 # ==========================================================
 
 import os
 import asyncio
 import threading
+
 from flask import Flask
+
 from pyrogram import Client, filters
+from pyrogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
+)
+
+from buttons import (
+    start_buttons,
+    settings_buttons,
+    about_buttons,
+    help_buttons,
+    file_buttons,
+    convert_buttons,
+    thumbnail_buttons
+)
+
+from help_text import HELP_TEXT
+
+from cleaner import send_clean
+
+from db import (
+    add_user
+)
+
+from jobs import (
+    create_job,
+    get_job,
+    update_job,
+    delete_job
+)
+
+from queue_system import (
+    add_to_queue,
+    user_processing,
+    queue_size,
+    active_count
+)
+
+from states import (
+    set_state,
+    get_state,
+    clear_state
+)
 
 from engine import process_pipeline
-from jobs import create_job
-from queue_system import add_to_queue, start_queue
 
 # ==========================================================
-# ENVIRONMENT VARIABLES
+# ENVIRONMENT
 # ==========================================================
 
 API_ID = int(os.environ["API_ID"])
 API_HASH = os.environ["API_HASH"]
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 
-PORT = int(os.environ.get("PORT", 10000))
+OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
+
+PORT = int(os.environ.get("PORT", "10000"))
+
+CHANNEL_POST = "https://t.me/Anitoon_edit/33"
 
 # ==========================================================
-# FLASK WEB SERVER
-# (Required for Render/Koyeb/Railway)
+# FLASK
 # ==========================================================
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "🚀 AniToon Bot is Running"
+    return "AniToon Bot Running ✅"
 
 # ==========================================================
-# PYROGRAM CLIENT
+# PYROGRAM
 # ==========================================================
 
 bot = Client(
@@ -46,127 +91,131 @@ bot = Client(
 )
 
 # ==========================================================
-# BASIC COMMANDS
+# HELPERS
 # ==========================================================
 
-@bot.on_message(filters.command("start") & filters.private)
-async def start_cmd(client, message):
+def owner(user_id: int):
+    return user_id == OWNER_ID
 
-    await message.reply_text(
-        "👋 Welcome to AniToon Bot!\n\n"
-        "📤 Send me a video or document to start processing."
+# ==========================================================
+# START
+# ==========================================================
+
+@bot.on_message(filters.private & filters.command("start"))
+async def start(client, message):
+
+    await add_user(
+        message.from_user.id,
+        message.from_user.first_name
     )
 
+    text = f"""
+👋 **Welcome {message.from_user.first_name}!**
 
-@bot.on_message(filters.command("help") & filters.private)
+I'm **AniToon Bot**.
+
+I can help you:
+
+✏ Rename files
+
+🎬 Convert media
+
+📝 Instant Edit
+
+📄 Media Information
+
+🖼 Custom Thumbnail
+
+🤖 Auto Thumbnail
+
+📊 Progress Bar
+
+👥 Queue System
+
+Choose an option below.
+"""
+
+    await send_clean(
+        message,
+        text,
+        reply_markup=start_buttons()
+    )
+
+# ==========================================================
+# HELP
+# ==========================================================
+
+@bot.on_message(filters.private & filters.command("help"))
 async def help_cmd(client, message):
 
-    await message.reply_text(
-        "📖 Help\n\n"
-        "• Send a Video or Document.\n"
-        "• The bot will automatically process it.\n"
-        "• Files are handled through the processing queue."
+    await send_clean(
+        message,
+        HELP_TEXT,
+        reply_markup=help_buttons()
     )
 
 # ==========================================================
-# FILE HANDLER
+# ABOUT
 # ==========================================================
 
-@bot.on_message((filters.document | filters.video) & filters.private)
-async def handle_file(client, message):
+@bot.on_message(filters.private & filters.command("about"))
+async def about_cmd(client, message):
 
-    job_id = str(message.id)
-    uid = message.from_user.id
+    text = f"""
+🤖 **AniToon Bot**
 
-    # ------------------------------------------
-    # Create Job
-    # ------------------------------------------
-    create_job(
-        job_id=job_id,
-        uid=uid,
-        data={
-            "new_name": None,
-            "mode": "rename",
-            "thumb_mode": "auto",
-        }
+Production Ready Rename & Convert Bot
+
+Creator:
+@MonkeyDLuffy_Prince
+
+Powered By:
+https://t.me/Anitoon_edit
+
+Updates:
+{CHANNEL_POST}
+"""
+
+    await send_clean(
+        message,
+        text,
+        reply_markup=about_buttons()
     )
 
-    await message.reply_text(
-        "📥 Your file has been added to the processing queue..."
+# ==========================================================
+# SETTINGS
+# ==========================================================
+
+@bot.on_message(filters.private & filters.command("settings"))
+async def settings(client, message):
+
+    if not owner(message.from_user.id):
+
+        return await message.reply_text(
+            "❌ Only the bot owner can access settings."
+        )
+
+    await send_clean(
+        message,
+        "⚙ Owner Settings",
+        reply_markup=settings_buttons()
     )
 
-    # ------------------------------------------
-    # Queue Handler
-    # ------------------------------------------
-    async def handler():
-        await process_pipeline(job_id, message, client)
-
-    await add_to_queue({
-        "uid": uid,
-        "handler": handler
-    })
-
-
 # ==========================================================
-# BOT EVENTS
+# PING
 # ==========================================================
 
-@bot.on_message(filters.command("ping") & filters.private)
-async def ping_cmd(client, message):
+@bot.on_message(filters.private & filters.command("ping"))
+async def ping(client, message):
 
     await message.reply_text("🏓 Pong!")
 
-
-@bot.on_message(filters.command("alive") & filters.private)
-async def alive_cmd(client, message):
-
-    await message.reply_text("✅ AniToon Bot is Online")
-
 # ==========================================================
-# STARTUP FUNCTIONS
+# ALIVE
 # ==========================================================
 
-def run_queue():
+@bot.on_message(filters.private & filters.command("alive"))
+async def alive(client, message):
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    await message.reply_text("✅ Bot Online")
 
-    # Start the queue processor
-    start_queue()
-
-    loop.run_forever()
-
-
-def run_bot():
-
-    bot.run()
-
-
-# ==========================================================
-# MAIN
-# ==========================================================
-
-if __name__ == "__main__":
-
-    print("=" * 50)
-    print("🚀 AniToon Bot Starting...")
-    print("=" * 50)
-
-    # Queue Thread
-    threading.Thread(
-        target=run_queue,
-        daemon=True
-    ).start()
-
-    # Telegram Bot Thread
-    threading.Thread(
-        target=run_bot,
-        daemon=True
-    ).start()
-def run_bot():
-    bot.run()
-    # Flask Web Server (Render/Koyeb/Railway)
-    app.run(
-        host="0.0.0.0",
-        port=PORT
-    )
