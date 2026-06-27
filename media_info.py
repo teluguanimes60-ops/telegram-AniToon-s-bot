@@ -1,6 +1,5 @@
 # ==========================================================
-# 🤖 AniToon Bot
-# Media Info System
+# 🤖 AniToon Bot - Media Info System (Production V8)
 # ==========================================================
 
 import os
@@ -10,7 +9,7 @@ from hachoir.parser import createParser
 from hachoir.metadata import extractMetadata
 
 # ==========================================================
-# HUMAN SIZE
+# SIZE
 # ==========================================================
 
 def human_size(size):
@@ -18,23 +17,20 @@ def human_size(size):
     if not size:
         return "0 B"
 
-    units = ["B", "KB", "MB", "GB", "TB"]
-
-    power = 1024
-
-    n = 0
+    units = ("B", "KB", "MB", "GB", "TB")
 
     size = float(size)
 
-    while size >= power and n < len(units) - 1:
-        size /= power
-        n += 1
+    i = 0
 
-    return f"{size:.2f} {units[n]}"
+    while size >= 1024 and i < len(units) - 1:
+        size /= 1024
+        i += 1
 
+    return f"{size:.2f} {units[i]}"
 
 # ==========================================================
-# DURATION
+# TIME
 # ==========================================================
 
 def format_time(seconds):
@@ -53,9 +49,8 @@ def format_time(seconds):
 
     return f"{m:02}:{s:02}"
 
-
 # ==========================================================
-# GET HACHOIR INFO
+# HACHOIR
 # ==========================================================
 
 def get_media_info(path):
@@ -97,14 +92,15 @@ def get_media_info(path):
                 if metadata.has("format"):
                     info["format"] = metadata.get("format")
 
-    except:
+            parser.close()
+
+    except Exception:
         pass
 
     return info
 
-
 # ==========================================================
-# VIDEO CODEC
+# CODEC
 # ==========================================================
 
 def ffprobe(path):
@@ -115,6 +111,8 @@ def ffprobe(path):
             "ffprobe",
             "-v",
             "error",
+            "-select_streams",
+            "v:0",
             "-show_entries",
             "stream=codec_name",
             "-of",
@@ -122,19 +120,18 @@ def ffprobe(path):
             path
         ]
 
-        result = subprocess.check_output(cmd).decode().splitlines()
+        result = subprocess.check_output(
+            cmd,
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
 
-        if result:
-            return result[0]
+        return result if result else "Unknown"
 
-    except:
-        pass
-
-    return "Unknown"
-
+    except Exception:
+        return "Unknown"
 
 # ==========================================================
-# BUILD TEXT
+# BUILD
 # ==========================================================
 
 def build_media_text(path):
@@ -148,7 +145,7 @@ def build_media_text(path):
         f"📁 <b>Name :</b> {data['filename']}\n"
         f"📦 <b>Size :</b> {data['size']}\n"
         f"🎞 <b>Duration :</b> {data['duration']}\n"
-        f"📺 <b>Resolution :</b> {data['width']} x {data['height']}\n"
+        f"📺 <b>Resolution :</b> {data['width']} × {data['height']}\n"
         f"🎥 <b>Codec :</b> {codec}\n"
         f"📂 <b>Format :</b> {data['format']}\n"
         f"🧾 <b>MIME :</b> {data['mime']}"
