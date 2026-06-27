@@ -1,5 +1,5 @@
 # ==========================================================
-# 🤖 AniToon Bot - Cleaner System
+# 🤖 AniToon Bot - Cleaner System (Production v8)
 # ==========================================================
 
 from typing import Dict
@@ -7,43 +7,39 @@ from typing import Dict
 LAST_BOT_MESSAGES: Dict[int, object] = {}
 LAST_USER_MESSAGES: Dict[int, object] = {}
 
-
 # ==========================================================
-# DELETE PREVIOUS BOT MESSAGE
+# DELETE LAST BOT MESSAGE
 # ==========================================================
 
 async def delete_last_bot(user_id: int):
-
     msg = LAST_BOT_MESSAGES.pop(user_id, None)
 
     if msg:
         try:
             await msg.delete()
-        except:
+        except Exception:
             pass
 
 
 # ==========================================================
-# DELETE PREVIOUS USER MESSAGE
+# DELETE LAST USER MESSAGE
 # ==========================================================
 
 async def delete_last_user(user_id: int):
-
     msg = LAST_USER_MESSAGES.pop(user_id, None)
 
     if msg:
         try:
             await msg.delete()
-        except:
+        except Exception:
             pass
 
 
 # ==========================================================
-# DELETE BOTH
+# CLEAN CHAT
 # ==========================================================
 
 async def clean_chat(user_id: int):
-
     await delete_last_bot(user_id)
     await delete_last_user(user_id)
 
@@ -58,20 +54,16 @@ async def send_clean(
     reply_markup=None,
     disable_web_page_preview=True
 ):
-
     user_id = message.from_user.id
 
-    # delete previous bot/user messages
     await clean_chat(user_id)
 
-    # send new bot message
     sent = await message.reply_text(
         text=text,
         reply_markup=reply_markup,
         disable_web_page_preview=disable_web_page_preview
     )
 
-    # remember current messages
     LAST_USER_MESSAGES[user_id] = message
     LAST_BOT_MESSAGES[user_id] = sent
 
@@ -79,7 +71,7 @@ async def send_clean(
 
 
 # ==========================================================
-# REPLACE BOT MESSAGE ONLY
+# REPLACE BOT MESSAGE
 # ==========================================================
 
 async def replace_bot_message(
@@ -88,7 +80,6 @@ async def replace_bot_message(
     reply_markup=None,
     disable_web_page_preview=True
 ):
-
     user_id = message.from_user.id
 
     await delete_last_bot(user_id)
@@ -108,17 +99,27 @@ async def replace_bot_message(
 # SAVE USER MESSAGE
 # ==========================================================
 
-async def remember_user(message):
-
-    LAST_USER_MESSAGES[message.from_user.id] = message
+async def save_user_message(user_id, message):
+    LAST_USER_MESSAGES[user_id] = message
 
 
 # ==========================================================
 # SAVE BOT MESSAGE
 # ==========================================================
 
-async def remember_bot(message):
+async def save_bot_message(user_id, message):
+    LAST_BOT_MESSAGES[user_id] = message
 
+
+# ==========================================================
+# COMPATIBILITY
+# ==========================================================
+
+async def remember_user(message):
+    LAST_USER_MESSAGES[message.from_user.id] = message
+
+
+async def remember_bot(message):
     LAST_BOT_MESSAGES[message.chat.id] = message
 
 
@@ -127,7 +128,6 @@ async def remember_bot(message):
 # ==========================================================
 
 def reset_user(user_id):
-
     LAST_USER_MESSAGES.pop(user_id, None)
     LAST_BOT_MESSAGES.pop(user_id, None)
 
@@ -137,6 +137,5 @@ def reset_user(user_id):
 # ==========================================================
 
 def reset_all():
-
     LAST_USER_MESSAGES.clear()
     LAST_BOT_MESSAGES.clear()
