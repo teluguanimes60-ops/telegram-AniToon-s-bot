@@ -2,7 +2,6 @@
 # 🤖 AniToon Bot
 # bot.py (Part 1/5)
 # ==========================================================
-print(bot.me)
 import os
 import asyncio
 import threading
@@ -115,11 +114,13 @@ def is_owner(user_id: int):
 @bot.on_message(filters.private & filters.command("start"))
 async def start_cmd(client, message):
 
+    print(f"/start received from {message.from_user.id}")
+
     await add_user(
         message.from_user.id,
         message.from_user.first_name
     )
-print(f"/start received from {message.from_user.id}")
+
     clear_state(message.from_user.id)
 
     text = f"""
@@ -885,12 +886,13 @@ async def save_custom_thumb(client, message):
 # UNKNOWN COMMAND
 # ==========================================================
 
-@bot.on_message(filters.private & ~filters.command(["start", "help"]))
+@bot.on_message(
+    filters.private &
+    filters.command(None)
+)
 async def unknown(client, message):
-
     await message.reply_text(
-        "❌ Unknown command.\n\n"
-        "Use /start"
+        "❌ Unknown command.\n\nUse /start"
     )
 
 # ==========================================================
@@ -923,9 +925,7 @@ def run_bot():
     print("=" * 60)
 
     try:
-        with bot:
-            print(f"Logged in as @{bot.me.username}")
-            idle()
+        bot.run()
 
     except Exception:
         import traceback
