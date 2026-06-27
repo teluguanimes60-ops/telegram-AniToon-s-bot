@@ -1,6 +1,6 @@
 # ==========================================================
-# 🤖 AniToon's Bot - Queue System v2
-# Render + Pyrogram Compatible
+# 🤖 AniToon Bot - Queue System v3 (Stable)
+# Compatible with bot.py + engine.py
 # ==========================================================
 
 import asyncio
@@ -25,7 +25,7 @@ QUEUE_RUNNING = False
 QUEUE_LOCK = asyncio.Lock()
 
 # ==========================================================
-# USER FUNCTIONS
+# ACTIVE USER FUNCTIONS
 # ==========================================================
 
 def active_count():
@@ -47,19 +47,16 @@ def add_user(user_id):
 def remove_user(user_id):
     ACTIVE_USERS.discard(user_id)
 
-
 # ==========================================================
-# WAITING QUEUE
+# QUEUE FUNCTIONS
 # ==========================================================
 
 async def add_to_queue(job):
-
     async with QUEUE_LOCK:
         WAITING_QUEUE.append(job)
 
 
 async def next_job():
-
     async with QUEUE_LOCK:
 
         if not WAITING_QUEUE:
@@ -67,9 +64,30 @@ async def next_job():
 
         return WAITING_QUEUE.popleft()
 
+# ==========================================================
+# RUN SINGLE JOB
+# ==========================================================
+
+async def run_job(job):
+
+    uid = job["uid"]
+
+    try:
+
+        add_user(uid)
+
+        await job["handler"]()
+
+    except Exception as e:
+
+        print("JOB ERROR:", e)
+
+    finally:
+
+        remove_user(uid)
 
 # ==========================================================
-# MAIN PROCESSOR
+# MAIN QUEUE LOOP
 # ==========================================================
 
 async def process_queue():
@@ -81,67 +99,38 @@ async def process_queue():
 
     QUEUE_RUNNING = True
 
+    print("✅ Queue Started")
+
     while True:
-
-        if is_full():
-
-            await asyncio.sleep(1)
-            continue
-
-        job = await next_job()
-
-        if job is None:
-
-            await asyncio.sleep(0.5)
-            continue
 
         try:
 
-            uid = job["uid"]
+            if is_full():
 
-            handler = job["handler"]
+                await asyncio.sleep(1)
+                continue
 
-            add_user(uid)
+            job = await next_job()
 
-            asyncio.create_task(run_job(uid, handler))
+            if job is None:
+
+                await asyncio.sleep(0.5)
+                continue
+
+            asyncio.create_task(run_job(job))
 
         except Exception as e:
 
             print("QUEUE ERROR:", e)
 
-
-# ==========================================================
-# RUN SINGLE JOB
-# ==========================================================
-
-async def run_job(uid, handler):
-
-    try:
-
-        await handler()
-
-    except Exception as e:
-
-        print("JOB ERROR:", e)
-
-    finally:
-
-        remove_user(uid)
-
+            await asyncio.sleep(1)
 
 # ==========================================================
 # START QUEUE
 # ==========================================================
 
-def start_queue(app=None):
-    """
-    Call this ONCE after app.start()
+def start_queue():
 
-    Example:
+    loop = asyncio.get_event_loop()
 
-        app.start()
-        start_queue(app)
-        idle()
-    """
-
-    asyncio.get_running_loop().create_task(process_queue())
+    loop.create_task(process_queue())
