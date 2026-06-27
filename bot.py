@@ -682,36 +682,6 @@ async def thumbnail_callbacks(client, query):
 
 
 # ==========================================================
-# CUSTOM THUMB RECEIVER
-# ==========================================================
-
-@bot.on_message(filters.private & filters.photo)
-async def custom_thumb(client, message):
-
-    uid = message.from_user.id
-    state = get_state(uid)
-
-    if state.get("step") != "waiting_custom_thumb":
-        return
-
-    from thumbnail import save_thumb
-
-    photo = message.photo.file_id
-
-    await save_thumb(uid, photo)
-
-    job_id = state["job_id"]
-
-    update_job(job_id, "thumb_mode", "saved")
-
-    await message.reply_text(
-        "✅ Thumbnail Saved.\n\nStarting Queue..."
-    )
-
-    await start_processing(job_id)
-
-
-# ==========================================================
 # START PROCESSING
 # ==========================================================
 
@@ -861,41 +831,47 @@ async def owner_clean(client, query):
 async def save_custom_thumb(client, message):
 
     uid = message.from_user.id
-
     state = get_state(uid)
 
     if state.get("step") != "waiting_custom_thumb":
         return
 
+    job_id = state.get("job_id")
+
+    if not job_id:
+        clear_state(uid)
+        return await message.reply_text("❌ Job expired.")
+
+    from thumbnail import save_thumb
+
     await save_thumb(
+        client,
         uid,
         message.photo.file_id
     )
 
-    job_id = state["job_id"]
-
-    update_job(
-        job_id,
-        "thumb_mode",
-        "saved"
-    )
+    update_job(job_id, "thumb_mode", "saved")
 
     clear_state(uid)
 
     await message.reply_text(
         "✅ Custom Thumbnail Saved.\n\n"
-        "Processing Started..."
+        "📥 Added to Queue..."
     )
+
+    job = get_job(job_id)
+
+    if not job:
+        return
 
     await add_to_queue({
         "uid": uid,
         "handler": lambda: process_pipeline(
             job_id,
-            get_job(job_id)["original_message"],
+            job["original_message"],
             bot
         )
     })
-
 
 # ==========================================================
 # UNKNOWN COMMAND
