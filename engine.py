@@ -1,46 +1,45 @@
-# ==========================================
-# AniToon Bot - FINAL ENGINE (STABLE FIX)
-# ==========================================
+# ==========================================================
+# 🤖 AniToon Bot - Processing Engine v4
+# Stable | Queue Compatible | Production Ready
+# ==========================================================
 
 import os
 import time
 import traceback
 
-from queue_system import add_user, remove_user, is_full
-from jobs import get_job, update_job
+from jobs import (
+    get_job,
+    update_job,
+    delete_job
+)
+
 from progress import progress
 from thumbnail import get_thumb
 
 
-# ==========================================
-# 🚀 MAIN PIPELINE
-# ==========================================
+# ==========================================================
+# MAIN PIPELINE
+# ==========================================================
+
 async def process_pipeline(job_id, msg, bot):
 
     job = get_job(job_id)
+
+    if job is None:
+        await msg.reply_text("❌ Job not found.")
+        return
+
     uid = job["uid"]
 
     status = await msg.reply_text("📥 Starting pipeline...")
 
     file_path = None
+    thumb = None
 
     try:
 
-        # ======================================
-        # 🚨 QUEUE LIMIT CHECK (IMPORTANT FIX)
-        # ======================================
-        if is_full():
-            await msg.reply_text(
-                "⛔ 20 users are processing right now.\nPlease wait a few minutes and try again."
-            )
-            return
+        update_job(job_id, "status", "downloading")
 
-        # add user AFTER check
-        add_user(uid)
-
-        # ======================================
-        # 📥 DOWNLOAD
-        # ======================================
         start = time.time()
 
         file_path = await msg.download(
@@ -50,40 +49,54 @@ async def process_pipeline(job_id, msg, bot):
 
         update_job(job_id, "file_path", file_path)
 
-        await status.edit_text("⚙️ Processing file...")
+        await status.edit_text("⚙️ Processing...")
 
-        # ======================================
-        # 🖼 THUMBNAIL
-        # ======================================
-        thumb_mode = job.get("thumb_mode")
+        # ==================================================
+        # THUMBNAIL
+        # ==================================================
 
         thumb = await get_thumb(
             user_id=uid,
-            mode=thumb_mode,
+            mode=job.get("thumb_mode", "auto"),
             auto_path=file_path
         )
 
-        # ======================================
-        # ✏️ RENAME MODE
-        # ======================================
+        # ==================================================
+        # RENAME
+        # ==================================================
+
         if job.get("mode") == "rename":
 
-            new_name = job.get("new_name", "AniToon_File")
+            new_name = job.get("new_name")
 
-            ext = os.path.splitext(file_path)[1]
-            new_path = new_name + ext
+            if new_name:
 
-            os.rename(file_path, new_path)
-            file_path = new_path
+                ext = os.path.splitext(file_path)[1]
 
-        # ======================================
-        # 📤 UPLOAD
-        # ======================================
+                new_path = new_name + ext
+
+                os.rename(file_path, new_path)
+
+                file_path = new_path
+
+                update_job(job_id, "file_path", file_path)
+
+        update_job(job_id, "status", "uploading")
+
         await status.edit_text("📤 Uploading...")
 
-        caption = f"✅ {job.get('new_name','AniToon File')}"
+        caption = f"✅ {os.path.basename(file_path)}"
 
-        if file_path.endswith((".mp4", ".mkv", ".mov", ".avi")):
+        if file_path.lower().endswith(
+            (
+                ".mp4",
+                ".mkv",
+                ".mov",
+                ".avi",
+                ".webm",
+                ".m4v"
+            )
+        ):
 
             await msg.reply_video(
                 video=file_path,
@@ -100,25 +113,41 @@ async def process_pipeline(job_id, msg, bot):
                 thumb=thumb
             )
 
-        await status.edit_text("✅ Completed Successfully")
+        update_job(job_id, "status", "completed")
+
+        await status.edit_text(
+            "✅ File processed successfully."
+        )
 
     except Exception as e:
 
-        await status.edit_text(f"❌ Error:\n{e}")
+        update_job(job_id, "status", "failed")
 
-        print("ENGINE ERROR:")
+        print("=" * 60)
+        print("ENGINE ERROR")
         print(traceback.format_exc())
+        print("=" * 60)
+
+        await status.edit_text(
+            f"❌ Processing Failed\n\n{e}"
+        )
 
     finally:
 
-        # ======================================
-        # 🧹 CLEANUP (VERY IMPORTANT)
-        # ======================================
         try:
+
             if file_path and os.path.exists(file_path):
                 os.remove(file_path)
-        except:
+
+        except Exception:
             pass
 
-        # remove user ALWAYS
-        remove_user(uid)
+        try:
+
+            if thumb and os.path.exists(thumb):
+                os.remove(thumb)
+
+        except Exception:
+            pass
+
+        delete_job(job_id)
