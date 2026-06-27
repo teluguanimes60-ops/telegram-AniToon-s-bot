@@ -3,6 +3,7 @@
 # ==========================================================
 
 import time
+import asyncio
 
 from buttons import download_buttons, upload_buttons
 from states import get_state
@@ -77,15 +78,15 @@ async def progress(
     stage="download"
 ):
 
-    state = get_state(message.chat.id)
+    state = get_state(message.reply_to_message.from_user.id if message.reply_to_message else message.chat.id)
 
     # -------------------------
     # Pause
     # -------------------------
 
-    while state.get("paused", False):
-        time.sleep(0.5)
-
+while state.get("paused", False):
+    await asyncio.sleep(0.5)
+    
     # -------------------------
     # Cancel
     # -------------------------
