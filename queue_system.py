@@ -1,6 +1,6 @@
 # ==========================================================
-# 🤖 AniToon Bot - Queue System v3 (Stable)
-# Compatible with bot.py + engine.py
+# 🤖 AniToon Bot - Queue System v4
+# Stable | FIFO Queue | Max 20 Active Users
 # ==========================================================
 
 import asyncio
@@ -20,12 +20,12 @@ ACTIVE_USERS = set()
 
 WAITING_QUEUE = deque()
 
-QUEUE_RUNNING = False
-
 QUEUE_LOCK = asyncio.Lock()
 
+QUEUE_RUNNING = False
+
 # ==========================================================
-# ACTIVE USER FUNCTIONS
+# ACTIVE USERS
 # ==========================================================
 
 def active_count():
@@ -48,7 +48,7 @@ def remove_user(user_id):
     ACTIVE_USERS.discard(user_id)
 
 # ==========================================================
-# QUEUE FUNCTIONS
+# QUEUE
 # ==========================================================
 
 async def add_to_queue(job):
@@ -64,6 +64,10 @@ async def next_job():
 
         return WAITING_QUEUE.popleft()
 
+
+def queue_size():
+    return len(WAITING_QUEUE)
+
 # ==========================================================
 # RUN SINGLE JOB
 # ==========================================================
@@ -71,23 +75,24 @@ async def next_job():
 async def run_job(job):
 
     uid = job["uid"]
+    handler = job["handler"]
+
+    add_user(uid)
 
     try:
 
-        add_user(uid)
-
-        await job["handler"]()
+        await handler()
 
     except Exception as e:
 
-        print("JOB ERROR:", e)
+        print(f"JOB ERROR [{uid}] :", e)
 
     finally:
 
         remove_user(uid)
 
 # ==========================================================
-# MAIN QUEUE LOOP
+# MAIN QUEUE
 # ==========================================================
 
 async def process_queue():
@@ -99,7 +104,7 @@ async def process_queue():
 
     QUEUE_RUNNING = True
 
-    print("✅ Queue Started")
+    print("✅ Queue Processor Started")
 
     while True:
 
@@ -126,11 +131,9 @@ async def process_queue():
             await asyncio.sleep(1)
 
 # ==========================================================
-# START QUEUE
+# START
 # ==========================================================
 
-def start_queue():
+async def start_queue():
 
-    loop = asyncio.get_event_loop()
-
-    loop.create_task(process_queue())
+    await process_queue()
