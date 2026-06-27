@@ -916,17 +916,10 @@ def run_bot():
     print("=" * 60)
 
     try:
-        bot.start()
-        print("✅ Bot logged into Telegram successfully")
-
-        import pyrogram
-        pyrogram.idle()
-
+        bot.run()
     except Exception as e:
-        print("BOT ERROR:", e)
-
-    finally:
-        bot.stop()
+        print("BOT ERROR:")
+        print(e)
 
 # ==========================================================
 # FLASK SERVER
