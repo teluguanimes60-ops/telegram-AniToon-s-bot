@@ -1,97 +1,155 @@
-# ==========================================
-# AniToon Bot - CLEANER SYSTEM (FIXED)
-# ==========================================
+# ==========================================================
+# 🤖 AniToon Bot - Cleaner System (Project V5)
+# ==========================================================
 
-# store last messages per user
-last_bot_message = {}
-last_user_message = {}
+from typing import Dict
+
+# ==========================================================
+# STORAGE
+# ==========================================================
+
+LAST_BOT_MESSAGES: Dict[int, object] = {}
+LAST_USER_MESSAGES: Dict[int, object] = {}
 
 
-# =========================
+# ==========================================================
 # SAVE BOT MESSAGE
-# =========================
-async def save_bot_message(user_id, message):
-    """
-    Save latest bot message for cleanup
-    """
-    last_bot_message[user_id] = message
+# ==========================================================
+
+async def save_bot_message(user_id: int, message):
+
+    LAST_BOT_MESSAGES[user_id] = message
 
 
-# =========================
+# ==========================================================
 # SAVE USER MESSAGE
-# =========================
-async def save_user_message(user_id, message):
-    """
-    Save latest user message for cleanup
-    """
-    last_user_message[user_id] = message
+# ==========================================================
+
+async def save_user_message(user_id: int, message):
+
+    LAST_USER_MESSAGES[user_id] = message
 
 
-# =========================
-# DELETE LAST BOT MESSAGE
-# =========================
-async def delete_last_bot(user_id):
-    """
-    Delete previous bot message
-    """
-    msg = last_bot_message.get(user_id)
+# ==========================================================
+# DELETE BOT MESSAGE
+# ==========================================================
 
-    if msg:
-        try:
-            await msg.delete()
-        except:
-            pass
+async def delete_bot_message(user_id: int):
 
-        last_bot_message.pop(user_id, None)
+    msg = LAST_BOT_MESSAGES.pop(user_id, None)
 
+    if not msg:
+        return
 
-# =========================
-# DELETE LAST USER MESSAGE
-# =========================
-async def delete_last_user(user_id):
-    """
-    Delete previous user message
-    """
-    msg = last_user_message.get(user_id)
-
-    if msg:
-        try:
-            await msg.delete()
-        except:
-            pass
-
-        last_user_message.pop(user_id, None)
+    try:
+        await msg.delete()
+    except Exception:
+        pass
 
 
-# =========================
-# CLEAN FULL CHAT
-# =========================
-async def clean_chat(user_id):
-    """
-    Delete both bot + user last messages
-    """
-    await delete_last_bot(user_id)
-    await delete_last_user(user_id)
+# ==========================================================
+# DELETE USER MESSAGE
+# ==========================================================
+
+async def delete_user_message(user_id: int):
+
+    msg = LAST_USER_MESSAGES.pop(user_id, None)
+
+    if not msg:
+        return
+
+    try:
+        await msg.delete()
+    except Exception:
+        pass
 
 
-# =========================
+# ==========================================================
+# CLEAN CHAT
+# ==========================================================
+
+async def clean_chat(user_id: int):
+
+    await delete_bot_message(user_id)
+    await delete_user_message(user_id)
+
+
+# ==========================================================
 # SEND CLEAN MESSAGE
-# =========================
-async def send_clean(message, text, reply_markup=None):
+# ==========================================================
+
+async def send_clean(
+    message,
+    text,
+    reply_markup=None,
+    disable_web_page_preview=True
+):
     """
-    Deletes old messages and sends a new clean message
+    Delete previous bot/user messages,
+    send a fresh message,
+    and remember it for next cleanup.
     """
 
-    uid = message.from_user.id
+    user_id = message.from_user.id
 
-    await clean_chat(uid)
+    await clean_chat(user_id)
 
-    m = await message.reply_text(
-        text,
+    sent = await message.reply_text(
+        text=text,
+        reply_markup=reply_markup,
+        disable_web_page_preview=disable_web_page_preview
+    )
+
+    await save_user_message(user_id, message)
+    await save_bot_message(user_id, sent)
+
+    return sent
+
+
+# ==========================================================
+# REMOVE ONLY BOT MESSAGE
+# ==========================================================
+
+async def replace_bot_message(
+    message,
+    text,
+    reply_markup=None
+):
+    """
+    Delete only the previous bot message.
+    Keep the user's message.
+    Useful for menus.
+    """
+
+    user_id = message.from_user.id
+
+    await delete_bot_message(user_id)
+
+    sent = await message.reply_text(
+        text=text,
         reply_markup=reply_markup
     )
 
-    await save_bot_message(uid, m)
-    await save_user_message(uid, message)
+    await save_bot_message(user_id, sent)
 
-    return m
+    return sent
+
+
+# ==========================================================
+# RESET USER CACHE
+# ==========================================================
+
+def reset_user(user_id: int):
+
+    LAST_BOT_MESSAGES.pop(user_id, None)
+    LAST_USER_MESSAGES.pop(user_id, None)
+
+
+# ==========================================================
+# RESET ALL
+# ==========================================================
+
+def reset_all():
+
+    LAST_BOT_MESSAGES.clear()
+    LAST_USER_MESSAGES.clear()
