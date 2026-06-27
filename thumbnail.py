@@ -1,121 +1,113 @@
-# ==========================================
-# AniToon Bot - THUMBNAIL SYSTEM (PRODUCTION)
-# ==========================================
+# ==========================================================
+# 🤖 AniToon Bot - Thumbnail Manager (Production v5)
+# ==========================================================
 
 import os
-import subprocess
 
 from db import (
     save_thumbnail,
-    get_thumbnail as db_get_thumbnail
+    get_thumbnail
 )
 
-# ==========================================
+from auto_thumb import (
+    generate_thumbnail,
+    delete_thumbnail
+)
+
+# ==========================================================
 # SAVE USER THUMBNAIL
-# ==========================================
+# ==========================================================
+
 async def save_thumb(user_id: int, file_id: str):
+    """
+    Save user's custom thumbnail.
+    """
     await save_thumbnail(user_id, file_id)
 
 
-# ==========================================
+# ==========================================================
 # GET THUMBNAIL
-# ==========================================
+# ==========================================================
+
 async def get_thumb(
     user_id=None,
     mode="auto",
     auto_path=None
 ):
+    """
+    Modes:
+        custom -> User's saved thumbnail
+        auto   -> Generate automatically
+        none   -> No thumbnail
+    """
 
     try:
 
         # ---------------- NONE ----------------
+
         if mode == "none":
             return None
 
-        # ---------------- SAVED ----------------
-        if mode == "saved":
+        # ---------------- CUSTOM ----------------
+
+        if mode == "custom":
 
             if not user_id:
                 return None
 
-            thumb = await db_get_thumbnail(user_id)
+            thumb = await get_thumbnail(user_id)
 
+            # Local image path
             if thumb and os.path.exists(thumb):
+                return thumb
+
+            # Telegram file_id
+            if thumb:
                 return thumb
 
             return None
 
         # ---------------- AUTO ----------------
+
         if mode == "auto":
 
-            if auto_path is None:
+            if not auto_path:
                 return None
 
-            return generate_auto_thumb(auto_path)
+            return generate_thumbnail(auto_path)
 
         return None
 
     except Exception as e:
-        print("Thumbnail Error:", e)
+
+        print("THUMBNAIL ERROR:", e)
+
         return None
 
 
-# ==========================================
-# AUTO THUMBNAIL
-# ==========================================
-def generate_auto_thumb(video_path):
+# ==========================================================
+# CLEANUP AUTO THUMB
+# ==========================================================
 
-    if not os.path.exists(video_path):
-        return None
-
-    thumb = video_path + "_thumb.jpg"
-
-    if os.path.exists(thumb):
-        try:
-            os.remove(thumb)
-        except:
-            pass
-
-    cmd = [
-        "ffmpeg",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-y",
-        "-ss",
-        "00:00:01",
-        "-i",
-        video_path,
-        "-frames:v",
-        "1",
-        thumb,
-    ]
-
-    try:
-
-        subprocess.run(
-            cmd,
-            check=True
-        )
-
-        if os.path.exists(thumb):
-            return thumb
-
-    except Exception as e:
-        print("FFmpeg Thumbnail Error:", e)
-
-    return None
-
-
-# ==========================================
-# CLEAN GENERATED THUMBNAIL
-# ==========================================
-def delete_auto_thumb(path):
+def cleanup_thumb(path):
+    """
+    Delete generated thumbnail after upload.
+    """
 
     try:
 
         if path and os.path.exists(path):
-            os.remove(path)
 
-    except:
+            delete_thumbnail(path)
+
+    except Exception:
         pass
+
+
+# ==========================================================
+# CHECK THUMB
+# ==========================================================
+
+def thumb_exists(path):
+
+    return bool(path and os.path.exists(path))
