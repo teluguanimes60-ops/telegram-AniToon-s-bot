@@ -1,10 +1,22 @@
-pyrogram
-tgcrypto
-flask
-aiofiles
-hachoir
-pillow
-requests
-motor
-pymongo
-python-dotenv
+pyrogram>=2.0.106
+tgcrypto>=1.2.5
+flask>=3.0.0
+aiofiles>=23.2.1
+hachoir>=3.2.0
+Pillow>=10.3.0
+requests>=2.32.0
+motor>=3.5.1
+pymongo>=4.8.0
+python-dotenv>=1.0.1
+
+# Media Processing
+ffmpeg-python>=0.2.0
+
+# Async HTTP
+aiohttp>=3.10.5
+
+# Progress & Utilities
+psutil>=6.0.0
+
+# Optional (recommended)
+uvloop>=0.20.0; platform_system != "Windows"
