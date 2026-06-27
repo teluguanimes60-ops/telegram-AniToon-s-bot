@@ -917,8 +917,10 @@ def run_bot():
     print("🤖 Telegram Bot Started")
     print("=" * 60)
 
-    bot.run()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
+    bot.run()
 
 # ==========================================================
 # FLASK SERVER
