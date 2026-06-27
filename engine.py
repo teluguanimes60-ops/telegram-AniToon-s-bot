@@ -1,16 +1,13 @@
 # ==========================================================
 # 🤖 AniToon Bot
-# engine.py
-# Part 1 / 3
+# Processing Engine (Part 1/2)
 # ==========================================================
 
 import os
-import shutil
-import asyncio
-import traceback
 import time
-
-from pyrogram.errors import FloodWait
+import shutil
+import traceback
+import subprocess
 
 from jobs import (
     get_job,
@@ -25,15 +22,12 @@ from thumbnail import (
     delete_auto_thumb
 )
 
-from instant_edit import (
-    save_editable_message
-)
+from media_info import build_media_text
 
-from cleaner import clean_chat
 
-# ----------------------------------------------------------
-# Supported Video Extensions
-# ----------------------------------------------------------
+# ==========================================================
+# FILE TYPES
+# ==========================================================
 
 VIDEO_EXTENSIONS = (
     ".mp4",
@@ -43,92 +37,126 @@ VIDEO_EXTENSIONS = (
     ".webm",
     ".m4v",
     ".ts",
+    ".flv"
 )
-
-# ----------------------------------------------------------
-# Supported Audio Extensions
-# ----------------------------------------------------------
 
 AUDIO_EXTENSIONS = (
     ".mp3",
     ".aac",
-    ".flac",
     ".wav",
     ".ogg",
-    ".m4a",
+    ".flac",
+    ".m4a"
 )
 
-# ----------------------------------------------------------
-# Helpers
-# ----------------------------------------------------------
 
-def is_video(path):
+# ==========================================================
+# TEMP CLEANER
+# ==========================================================
 
-    return path.lower().endswith(VIDEO_EXTENSIONS)
-
-
-def is_audio(path):
-
-    return path.lower().endswith(AUDIO_EXTENSIONS)
-
-
-def safe_remove(path):
+def safe_delete(path):
 
     try:
 
         if path and os.path.exists(path):
             os.remove(path)
 
-    except Exception:
+    except:
         pass
 
 
-def safe_move(src, dst):
+# ==========================================================
+# SIMPLE CONVERTER
+# ==========================================================
 
-    try:
+def convert_file(input_file, mode):
 
-        shutil.move(src, dst)
-        return True
+    root = os.path.splitext(input_file)[0]
 
-    except Exception:
-        return False
+    if mode == "video":
+
+        output = root + ".mp4"
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            input_file,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-c:a",
+            "aac",
+            output
+        ]
+
+    elif mode == "audio":
+
+        output = root + ".mp3"
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            input_file,
+            output
+        ]
+
+    elif mode == "document":
+
+        return input_file
+
+    else:
+
+        return input_file
+
+    subprocess.run(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    if os.path.exists(output):
+        return output
+
+    return input_file
 
 
-# ----------------------------------------------------------
-# Main Pipeline
-# ----------------------------------------------------------
+# ==========================================================
+# MAIN PIPELINE
+# ==========================================================
 
-async def process_pipeline(job_id, message, client):
+async def process_pipeline(job_id, message, bot):
 
     job = get_job(job_id)
 
     if not job:
-        await message.reply_text("❌ Job not found.")
+
+        await message.reply_text(
+            "❌ Job not found."
+        )
+
         return
 
-    user_id = job["uid"]
-
-    downloaded_file = None
-    output_file = None
-    thumb = None
-
     status = await message.reply_text(
-        "📥 Preparing your task..."
+        "📥 Starting..."
     )
+
+    file_path = None
+    thumb = None
 
     try:
 
-        # --------------------------------------
-        # Clean old chat messages
-        # --------------------------------------
-
-        await clean_chat(user_id)
+        # =====================================================
+        # DOWNLOAD
+        # =====================================================
 
         update_job(job_id, "status", "downloading")
 
         start = time.time()
 
-        downloaded_file = await message.download(
+        file_path = await message.download(
             progress=progress,
             progress_args=(
                 status,
@@ -137,245 +165,174 @@ async def process_pipeline(job_id, message, client):
             )
         )
 
-        output_file = downloaded_file
+        update_job(job_id, "file_path", file_path)
+
+        await status.edit_text(
+            "⚙️ Processing..."
+        )
+
+        # =====================================================
+        # MEDIA INFO
+        # =====================================================
+
+        if job.get("mode") == "media_info":
+
+            text = build_media_text(file_path)
+
+            await message.reply_text(text)
+
+            return
+
+        # =====================================================
+        # CONVERT
+        # =====================================================
+
+        convert_mode = job.get("convert_mode")
+
+        if convert_mode:
+
+            converted = convert_file(
+                file_path,
+                convert_mode
+            )
+
+            if converted != file_path:
+                safe_delete(file_path)
+
+            file_path = converted
+
+            update_job(
+                job_id,
+                "file_path",
+                file_path
+            )
+
+        # =====================================================
+        # RENAME
+        # =====================================================
+
+        if job.get("new_name"):
+
+            ext = os.path.splitext(file_path)[1]
+
+            new_path = (
+                job["new_name"] + ext
+            )
+
+            shutil.move(
+                file_path,
+                new_path
+            )
+
+            file_path = new_path
+
+            update_job(
+                job_id,
+                "file_path",
+                file_path
+            )
+
+        # =====================================================
+        # THUMBNAIL
+        # =====================================================
+
+        thumb = await get_thumb(
+            user_id=job["uid"],
+            mode=job.get(
+                "thumb_mode",
+                "auto"
+            ),
+            auto_path=file_path
+        )
+
+        # =====================================================
+        # UPLOADING
+        # =====================================================
 
         update_job(
             job_id,
-            "file_path",
-            downloaded_file
-        )
-
-        await status.edit_text(
-            "⚙️ Processing your file..."
-        )
-
-        # Remaining processing (rename, convert,
-        # thumbnail, upload, cleanup)
-        # continues in Part 2.
-
-        # ==========================================
-        # RENAME MODE
-        # ==========================================
-
-        if mode == "rename":
-
-            new_name = job.get("new_name")
-
-            if new_name:
-
-                ext = os.path.splitext(download_path)[1]
-
-                final_path = os.path.join(
-                    os.path.dirname(download_path),
-                    new_name + ext
-                )
-
-                if os.path.exists(final_path):
-                    os.remove(final_path)
-
-                os.rename(download_path, final_path)
-
-            else:
-                final_path = download_path
-
-        # ==========================================
-        # CONVERT MODE
-        # ==========================================
-
-        elif mode == "convert":
-
-            await status.edit_text("🎬 Converting File...")
-
-            convert_type = job.get("convert_type", "video")
-
-            output = os.path.splitext(download_path)[0]
-
-            if convert_type == "video":
-                final_path = output + ".mp4"
-
-            elif convert_type == "audio":
-                final_path = output + ".mp3"
-
-            else:
-                final_path = output + ".mkv"
-
-            cmd = [
-                get_ffmpeg(),
-                "-y",
-                "-i",
-                download_path,
-                final_path
-            ]
-
-            process = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-
-            if process.returncode != 0:
-                raise Exception("FFmpeg conversion failed.")
-
-        else:
-
-            final_path = download_path
-
-        update_job(job_id, "status", "uploading")
-
-        # ==========================================
-        # THUMBNAIL
-        # ==========================================
-
-        thumb = await get_thumb(
-            user_id=uid,
-            mode=thumb_mode,
-            auto_path=final_path
-        )
-
-        # ==========================================
-        # CAPTION
-        # ==========================================
-
-        filename = os.path.basename(final_path)
-
-        caption = (
-            f"📁 <b>{filename}</b>\n\n"
-            f"✨ Processed by AniToon Bot"
+            "status",
+            "uploading"
         )
 
         await status.edit_text(
             "📤 Uploading..."
         )
 
-        # ==========================================
-        # UPLOAD FILE
-        # ==========================================
+        start = time.time()
 
-        upload_start = time.time()
+        caption = os.path.basename(file_path)
 
-        ext = os.path.splitext(final_path)[1].lower()
-
-        video_ext = (
-            ".mp4",
-            ".mkv",
-            ".mov",
-            ".avi",
-            ".webm",
-            ".m4v"
+        is_video = file_path.lower().endswith(
+            VIDEO_EXTENSIONS
         )
 
-        audio_ext = (
-            ".mp3",
-            ".aac",
-            ".flac",
-            ".wav",
-            ".ogg",
-            ".m4a"
-        )
+        if is_video:
 
-        if ext in video_ext:
-
-            await msg.reply_video(
-                video=final_path,
+            await message.reply_video(
+                video=file_path,
                 caption=caption,
                 thumb=thumb,
                 supports_streaming=True,
                 progress=progress,
                 progress_args=(
                     status,
-                    upload_start,
-                    "upload"
-                )
-            )
-
-        elif ext in audio_ext:
-
-            await msg.reply_audio(
-                audio=final_path,
-                caption=caption,
-                progress=progress,
-                progress_args=(
-                    status,
-                    upload_start,
+                    start,
                     "upload"
                 )
             )
 
         else:
 
-            await msg.reply_document(
-                document=final_path,
+            if job.get("thumb_mode") == "none":
+
+                thumb = None
+
+            await message.reply_document(
+                document=file_path,
                 caption=caption,
                 thumb=thumb,
                 progress=progress,
                 progress_args=(
                     status,
-                    upload_start,
+                    start,
                     "upload"
                 )
             )
 
-        update_job(job_id, "status", "completed")
+        update_job(
+            job_id,
+            "status",
+            "completed"
+        )
 
         await status.edit_text(
-            "✅ File processed successfully.\n\n"
-            "Thank you for using AniToon Bot ❤️"
+            "✅ Completed Successfully."
         )
 
     except Exception as e:
 
-        update_job(job_id, "status", "failed")
-
-        print("=" * 60)
-        print("ENGINE ERROR")
         print(traceback.format_exc())
-        print("=" * 60)
+
+        update_job(
+            job_id,
+            "status",
+            "failed"
+        )
 
         try:
+
             await status.edit_text(
-                f"❌ Processing Failed\n\n{str(e)}"
+                f"❌ Processing Failed\n\n{e}"
             )
+
         except:
             pass
 
     finally:
 
-        # ==========================================
-        # DELETE TEMP FILES
-        # ==========================================
+        safe_delete(file_path)
 
-        try:
-
-            if download_path and os.path.exists(download_path):
-                os.remove(download_path)
-
-        except:
-            pass
-
-        try:
-
-            if (
-                final_path
-                and final_path != download_path
-                and os.path.exists(final_path)
-            ):
-                os.remove(final_path)
-
-        except:
-            pass
-
-        try:
-
-            if thumb and os.path.exists(thumb):
-                os.remove(thumb)
-
-        except:
-            pass
-
-        # ==========================================
-        # REMOVE JOB
-        # ==========================================
+        delete_auto_thumb(thumb)
 
         delete_job(job_id)
-
-        print(f"✅ Job {job_id} completed.")
