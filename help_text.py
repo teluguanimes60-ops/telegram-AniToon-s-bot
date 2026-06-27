@@ -1,140 +1,283 @@
 # ==========================================================
-# 🤖 AniToon's Rename & Convert Bot
-# Help Text
+# 🤖 AniToon Bot - Help Text (Project V5)
 # ==========================================================
 
 HELP_TEXT = """
-<b>🤖 Welcome to AniToon's Rename & Convert Bot</b>
+<b>🤖 Welcome to AniToon Bot</b>
 
-━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>✨ Features</b>
+<b>✨ WHAT THIS BOT CAN DO</b>
 
 ✏️ Rename Files
 
-🎬 Convert Videos
+🎬 Convert Media
 
-📝 Instant Caption Edit
+📝 Instant Edit
+
+📄 Media Information
 
 🖼 Custom Thumbnail
 
 🤖 Auto Thumbnail
 
-📊 Live Progress Bar
+🚫 Without Thumbnail (Documents Only)
 
-⚡ Fast Upload
+📥 Download Progress
 
-🎥 Streamable Video Upload
+📤 Upload Progress
 
-📁 Document Upload
+⏸ Pause Download
 
-📺 Media Information
+▶ Resume Download
 
-🗑 Auto Chat Cleaner
+❌ Cancel Job
 
-👥 Smart Queue System
+👥 Queue System
 
-━━━━━━━━━━━━━━━━━━━━━━
+🧹 Auto Cleaner
 
-<b>✏️ Rename</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-• Send any file.
+<b>🏠 START MENU</b>
 
-• Press <b>✏ Rename</b>
+After sending <b>/start</b> you will see:
 
-• Enter new filename.
+📖 Help
+Shows complete guide of the bot.
 
-• Choose thumbnail.
+⚙️ Settings
+Available only for the Bot Owner.
 
-• Bot uploads renamed file.
+📢 My Channels
+Shows all official AniToon channels.
 
-━━━━━━━━━━━━━━━━━━━━━━
+ℹ️ About
+Shows creator and project information.
 
-<b>🎬 Convert</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Supported:
+<b>✏️ RENAME MODE</b>
+
+1️⃣ Send any video or file.
+
+2️⃣ Press <b>✏️ Rename</b>
+
+3️⃣ Send the new filename.
+
+Example
+
+Anime Episode 01
+
+4️⃣ Choose Thumbnail.
+
+5️⃣ Bot downloads your file.
+
+6️⃣ Renames it.
+
+7️⃣ Uploads the renamed file.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🎬 CONVERT MODE</b>
+
+Choose one of:
 
 🎥 Video
 
+Uploads as Streamable Video.
+
 📄 Document
+
+Uploads as Telegram File.
 
 🎵 Audio
 
-Video uploads include
+Extracts Audio and uploads it.
 
-✅ Streaming
+Supports:
 
-✅ Duration
+MP4
 
-✅ Resolution
+MKV
 
-✅ Thumbnail
+AVI
 
-━━━━━━━━━━━━━━━━━━━━━━
+MOV
 
-<b>📝 Instant Caption</b>
+WEBM
 
-Edit only the caption.
+M4V
 
-No download.
+and many more.
 
-No upload.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Instant update.
+<b>📝 INSTANT EDIT</b>
 
-━━━━━━━━━━━━━━━━━━━━━━
+This mode DOES NOT
 
-<b>🖼 Thumbnail</b>
+❌ Download
 
-Choose
+❌ Convert
+
+❌ Upload
+
+Instead,
+
+Telegram instantly edits the caption of your latest uploaded file.
+
+It is very fast.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📄 MEDIA INFO</b>
+
+Displays
+
+📦 File Size
+
+🎬 Duration
+
+📺 Resolution
+
+🎵 Audio Info
+
+📁 File Name
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🖼 THUMBNAIL OPTIONS</b>
 
 🖼 Custom Thumbnail
 
+Upload your own thumbnail once.
+
+It will be saved permanently.
+
 🤖 Auto Thumbnail
 
-━━━━━━━━━━━━━━━━━━━━━━
+Bot generates thumbnail automatically.
 
-<b>📊 Progress</b>
+🚫 Without Thumbnail
+
+Only available for Documents.
+
+Videos always use thumbnail.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📥 DOWNLOAD PROGRESS</b>
 
 Shows
 
-⬇ Download
-
-⚙ Processing
-
-⬆ Upload
+Progress Bar
 
 Percentage
+
+Downloaded Size
 
 Speed
 
 ETA
 
-━━━━━━━━━━━━━━━━━━━━━━
+Buttons
 
-<b>👥 Queue</b>
+⏸ Pause
 
-Supports up to <b>20 users</b> simultaneously.
+▶ Resume
 
-If full,
+❌ Cancel
 
-the bot asks new users to wait.
+📢 My Channels
 
-━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>💬 Commands</b>
+<b>📤 UPLOAD PROGRESS</b>
 
-/start
+Shows
 
-/help
+Progress Bar
 
-/settings
+Percentage
 
-/about
+Uploaded Size
 
-━━━━━━━━━━━━━━━━━━━━━━
+Speed
 
-<b>❤️ Thank you for using AniToon's Bot.</b>
+ETA
 
-🚀 <b>Powered By AniToon Bot</b>
+Buttons
+
+❌ Cancel
+
+📢 My Channels
+
+(No Pause/Resume while uploading.)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>👥 QUEUE SYSTEM</b>
+
+✔ Maximum 20 active users
+
+✔ Waiting Queue
+
+✔ Auto Start Next Job
+
+✔ Duplicate Protection
+
+✔ One Active Job Per User
+
+✔ Queue Cleanup
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🧹 AUTO CLEANER</b>
+
+The bot automatically removes
+
+✔ Previous Bot Messages
+
+✔ Previous User Messages
+
+This keeps your chat clean.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>⚙️ OWNER SETTINGS</b>
+
+Only Bot Owner can change
+
+👥 Maximum Active Users
+
+📢 Channel Links
+
+🧹 Cleaner Status
+
+Future Admin Settings
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📢 OFFICIAL CHANNEL</b>
+
+https://t.me/Anitoon_edit
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>👑 CREATOR</b>
+
+@MonkeyDLuffy_Prince
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>❤️ Powered By</b>
+
+<b>AniToon Edit</b>
+
+https://t.me/Anitoon_edit
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🚀 Thank you for using AniToon Bot.</b>
 """
