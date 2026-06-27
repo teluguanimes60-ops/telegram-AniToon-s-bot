@@ -1,51 +1,49 @@
+# ==========================================================
+# 🤖 AniToon Bot - Auto Thumbnail Generator (Production v5)
+# ==========================================================
+
 import os
 import subprocess
 
-# Default ffmpeg command
-FFMPEG_PATH = "ffmpeg"
+from ffmpeg import get_ffmpeg
 
+# ==========================================================
+# GENERATE AUTO THUMBNAIL
+# ==========================================================
 
-# =========================
-# SETUP FFMPEG
-# =========================
-def setup_ffmpeg():
+def generate_thumbnail(video_path, second=5):
     """
-    Check if ffmpeg exists in system.
-    If not found, fallback to default command.
-    """
+    Generate a thumbnail from a video.
 
-    global FFMPEG_PATH
-
-    try:
-        subprocess.run(
-            ["ffmpeg", "-version"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        FFMPEG_PATH = "ffmpeg"
-
-    except Exception:
-        FFMPEG_PATH = "ffmpeg"
-
-
-# =========================
-# GENERATE THUMBNAIL
-# =========================
-def generate_thumbnail(video_path):
-    """
-    Extract thumbnail from video at 5th second.
+    Returns:
+        thumbnail_path
+        or
+        None
     """
 
     try:
-        if not video_path or not os.path.exists(video_path):
+
+        if not video_path:
             return None
 
-        thumb_path = f"thumb_{os.path.basename(video_path)}.jpg"
+        if not os.path.exists(video_path):
+            return None
+
+        thumb_path = os.path.splitext(video_path)[0] + "_thumb.jpg"
+
+        # Remove old thumbnail
+        if os.path.exists(thumb_path):
+            try:
+                os.remove(thumb_path)
+            except Exception:
+                pass
 
         cmd = [
-            FFMPEG_PATH,
+            get_ffmpeg(),
+            "-hide_banner",
+            "-loglevel", "error",
             "-y",
-            "-ss", "00:00:05",
+            "-ss", str(second),
             "-i", video_path,
             "-frames:v", "1",
             "-q:v", "2",
@@ -55,13 +53,39 @@ def generate_thumbnail(video_path):
         subprocess.run(
             cmd,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
+            check=True
         )
 
         if os.path.exists(thumb_path):
             return thumb_path
 
-        return None
+    except Exception as e:
+
+        print("AUTO THUMB ERROR:", e)
+
+    return None
+
+
+# ==========================================================
+# DELETE GENERATED THUMBNAIL
+# ==========================================================
+
+def delete_thumbnail(path):
+
+    try:
+
+        if path and os.path.exists(path):
+            os.remove(path)
 
     except Exception:
-        return None
+        pass
+
+
+# ==========================================================
+# CHECK IMAGE
+# ==========================================================
+
+def thumbnail_exists(path):
+
+    return bool(path and os.path.exists(path))
