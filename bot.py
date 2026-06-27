@@ -899,13 +899,11 @@ async def unknown(client, message):
 def run_queue():
 
     loop = asyncio.new_event_loop()
-
     asyncio.set_event_loop(loop)
 
     loop.run_until_complete(
         start_queue()
     )
-
 
 # ==========================================================
 # TELEGRAM BOT
@@ -916,9 +914,6 @@ def run_bot():
     print("=" * 60)
     print("🤖 Telegram Bot Started")
     print("=" * 60)
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
     bot.run()
 
@@ -950,6 +945,12 @@ if __name__ == "__main__":
     print("🚀 AniToon Bot Starting...")
     print("=" * 60)
 
+if __name__ == "__main__":
+
+    print("=" * 60)
+    print("🚀 AniToon Bot Starting...")
+    print("=" * 60)
+
     # Queue Thread
     queue_thread = threading.Thread(
         target=run_queue,
@@ -957,12 +958,12 @@ if __name__ == "__main__":
     )
     queue_thread.start()
 
-    # Telegram Thread
-    bot_thread = threading.Thread(
-        target=run_bot,
+    # Flask Thread
+    web_thread = threading.Thread(
+        target=run_web,
         daemon=True
     )
-    bot_thread.start()
+    web_thread.start()
 
-    # Flask (Main Thread)
-    run_web()
+    # Telegram Bot (MUST stay in Main Thread)
+    run_bot()
