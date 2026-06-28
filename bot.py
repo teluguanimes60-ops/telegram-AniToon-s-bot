@@ -1150,30 +1150,23 @@ async def queue_runner():
 # ==========================================================
 
 async def bot_runner():
+    print("Starting Telegram Bot...")
+
     try:
-        print("Starting Telegram Bot...")
-
         await bot.start()
+        print("Bot login successful.")
 
-        print("=" * 60)
-        print("🤖 AniToon Bot Started Successfully")
-        print("=" * 60)
-
-        asyncio.create_task(queue_runner())
-
-        await idle()
-
-    except Exception as e:
+    except Exception:
         import traceback
-        print(traceback.format_exc())
+        traceback.print_exc()
+        return
 
-    finally:
-        try:
-            await bot.stop()
-        except:
-            pass
+    print("Creating queue task...")
+    asyncio.create_task(queue_runner())
 
-
+    print("Waiting for updates...")
+    await idle()
+    
 # ==========================================================
 # FLASK THREAD
 # ==========================================================
