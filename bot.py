@@ -4,7 +4,10 @@
 
 # ==========================================================
 
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("pyrogram").setLevel(logging.INFO)
 
 import os
 
@@ -196,23 +199,13 @@ def home():
 
 # ==========================================================
 
-
-
 bot = Client(
-
-    "AniToonBot",
-
+    name=":memory:",
     api_id=API_ID,
-
     api_hash=API_HASH,
-
-    bot_token=BOT_TOKEN
-
+    bot_token=BOT_TOKEN,
+    no_updates=False
 )
-
-
-
-
 
 # ==========================================================
 
@@ -1153,19 +1146,19 @@ async def bot_runner():
     print("Starting Telegram Bot...")
 
     try:
+        print("Before bot.start()")
         await bot.start()
-        print("Bot login successful.")
+        print("After bot.start()")
 
-    except Exception:
+        me = await bot.get_me()
+        print(f"Logged in as @{me.username}")
+
+        asyncio.create_task(queue_runner())
+        await idle()
+
+    except Exception as e:
         import traceback
         traceback.print_exc()
-        return
-
-    print("Creating queue task...")
-    asyncio.create_task(queue_runner())
-
-    print("Waiting for updates...")
-    await idle()
     
 # ==========================================================
 # FLASK THREAD
