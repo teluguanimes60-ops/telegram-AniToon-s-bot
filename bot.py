@@ -1200,3 +1200,25 @@ if __name__ == "__main__":
     ).start()
 
     asyncio.run(bot_runner())
+
+async def bot_runner():
+
+    print("Starting Telegram Bot...")
+
+    try:
+        await bot.start()
+        print("Bot login successful.")
+
+    except Exception as e:
+        import traceback
+        print("BOT START ERROR")
+        print(traceback.format_exc())
+        return
+
+    print("Starting Queue...")
+    asyncio.create_task(queue_runner())
+
+    print("Waiting for updates...")
+    await idle()
+
+    await bot.stop()
