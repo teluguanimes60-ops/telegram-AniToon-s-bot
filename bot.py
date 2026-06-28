@@ -15,7 +15,7 @@ import asyncio
 
 import threading
 
-
+from db import init_database
 
 from flask import Flask
 
@@ -198,6 +198,9 @@ def home():
 # BOT
 
 # ==========================================================
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 bot = Client(
     name=":memory:",
@@ -559,7 +562,8 @@ Choose an option below.
 
     await query.message.edit_text(
         text,
-        reply_markup=start_buttons()
+    reply_markup=start_buttons(
+        is_owner(query.from_user.id)
     )
 
     await query.answer()
@@ -1143,22 +1147,32 @@ async def queue_runner():
 # ==========================================================
 
 async def bot_runner():
-    print("Starting Telegram Bot...")
-
     try:
-        print("Before bot.start()")
-        await bot.start()
-        print("After bot.start()")
+        print("Starting Telegram Bot...")
 
-        me = await bot.get_me()
-        print(f"Logged in as @{me.username}")
+        await bot.start()
+
+        print("Bot connected to Telegram!")
+
+        await init_database()
+
+        print("=" * 60)
+        print("🤖 AniToon Bot Started Successfully")
+        print("=" * 60)
 
         asyncio.create_task(queue_runner())
+
         await idle()
 
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
+
+    finally:
+        try:
+            await bot.stop()
+        except:
+            pass
     
 # ==========================================================
 # FLASK THREAD
