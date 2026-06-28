@@ -560,13 +560,14 @@ I'm **AniToon Bot**
 Choose an option below.
 """
 
-    await query.message.edit_text(
-        text,
+await query.message.edit_text(
+    text,
     reply_markup=start_buttons(
         is_owner(query.from_user.id)
     )
+)
 
-    await query.answer()
+await query.answer()
 
 
 # ==========================================================
