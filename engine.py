@@ -1,6 +1,5 @@
 # ==========================================================
 # 🤖 AniToon Bot
-# Processing Engine (Part 1/2)
 # ==========================================================
 
 import os
@@ -278,53 +277,53 @@ async def process_pipeline(job_id, message, bot):
 
         caption = os.path.basename(file_path)
 
-is_video = file_path.lower().endswith(VIDEO_EXTENSIONS)
-is_audio = file_path.lower().endswith(AUDIO_EXTENSIONS)
+        is_video = file_path.lower().endswith(VIDEO_EXTENSIONS)
+        is_audio = file_path.lower().endswith(AUDIO_EXTENSIONS)
 
-if is_video:
+        if is_video:
 
-    await message.reply_video(
-        video=file_path,
-        caption=caption,
-        thumb=thumb,
-        supports_streaming=True,
-        progress=progress,
-        progress_args=(
-            status,
-            start,
-            "upload"
-        )
-    )
+            await message.reply_video(
+                video=file_path,
+                caption=caption,
+                thumb=thumb,
+                supports_streaming=True,
+                progress=progress,
+                progress_args=(
+                    status,
+                    start,
+                    "upload"
+                )
+            )
 
-elif is_audio:
+        elif is_audio:
 
-    await message.reply_audio(
-        audio=file_path,
-        caption=caption,
-        progress=progress,
-        progress_args=(
-            status,
-            start,
-            "upload"
-        )
-    )
+            await message.reply_audio(
+                audio=file_path,
+                caption=caption,
+                progress=progress,
+                progress_args=(
+                    status,
+                    start,
+                    "upload"
+                )
+            )
 
-else:
+        else:
 
-    if job.get("thumb_mode") == "none":
-        thumb = None
+            if job.get("thumb_mode") == "none":
+                thumb = None
 
-    await message.reply_document(
-        document=file_path,
-        caption=caption,
-        thumb=thumb,
-        progress=progress,
-        progress_args=(
-            status,
-            start,
-            "upload"
-        )
-    )
+            await message.reply_document(
+                document=file_path,
+                caption=caption,
+                thumb=thumb,
+                progress=progress,
+                progress_args=(
+                    status,
+                    start,
+                    "upload"
+                )
+            )
 
         # ==========================================
         # FINISHED
