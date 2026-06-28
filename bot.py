@@ -19,7 +19,7 @@ from db import init_database
 
 from flask import Flask
 
-
+from pyrogram import idle
 
 from pyrogram import Client, filters, idle
 
@@ -31,7 +31,7 @@ from pyrogram.types import (
 
 )
 
-
+from database import init_database
 
 from buttons import (
 
@@ -1133,22 +1133,27 @@ async def queue_runner():
 # START BOT
 # ==========================================================
 
+# ==========================================================
+# START BOT
+# ==========================================================
+
 async def bot_runner():
 
     print("Starting Telegram Bot...")
 
+    await start_queue()
+
     await bot.start()
 
     me = await bot.get_me()
-print(f"Logged in as @{me.username}")
+
+    print(f"Logged in as @{me.username}")
 
     print("Bot connected!")
 
     await init_database()
 
-    await start_queue()
-
-    print("Queue Started!")
+    print("Database initialized!")
 
     await idle()
 
