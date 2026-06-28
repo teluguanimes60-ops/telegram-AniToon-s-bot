@@ -203,11 +203,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 bot = Client(
-    name=":memory:",
+    "AniToonBot",
     api_id=API_ID,
     api_hash=API_HASH,
-    bot_token=BOT_TOKEN,
-    no_updates=False
+    bot_token=BOT_TOKEN
 )
 
 # ==========================================================
@@ -1136,21 +1135,24 @@ async def queue_runner():
 
 async def bot_runner():
 
-    try:
-        print("Starting Telegram Bot...")
+    print("Starting Telegram Bot...")
 
-        await bot.start()
+    await bot.start()
 
-        print("Bot connected to Telegram!")
+    me = await bot.get_me()
+print(f"Logged in as @{me.username}")
 
-        await init_database()
-        
-        asyncio.create_task(queue_runner())
+    print("Bot connected!")
 
-        await idle()
+    await init_database()
 
-    finally:
-        await bot.stop()
+    await start_queue()
+
+    print("Queue Started!")
+
+    await idle()
+
+    await bot.stop()
     
 # ==========================================================
 # FLASK THREAD
@@ -1178,22 +1180,3 @@ if __name__ == "__main__":
     ).start()
 
     asyncio.run(bot_runner())
-
-    print("Starting Telegram Bot...")
-
-    try:
-        await bot.start()
-        print("Bot login successful.")
-
-    except Exception as e:
-        import traceback
-        print("BOT START ERROR")
-        print(traceback.format_exc())
-        return
-
-    print("Starting Queue...")
-
-    print("Waiting for updates...")
-    await idle()
-
-    await bot.stop()
