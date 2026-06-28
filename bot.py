@@ -524,11 +524,6 @@ async def alive_cmd(client, message):
 
     )
     
-# ==========================================================
-# CALLBACK QUERIES
-# bot.py (Part 2/5)
-# ==========================================================
-
 @bot.on_callback_query(filters.regex("^home$"))
 async def home_callback(client, query):
 
@@ -541,18 +536,7 @@ I'm **AniToon Bot**
 
 ━━━━━━━━━━━━━━━━━━
 
-✏ Rename Files
-
-🎬 Convert Files
-
-📝 Instant Edit
-
-📄 Media Information
-
-🖼 Thumbnail Support
-
 📊 Live Progress
-
 👥 Queue System
 
 ━━━━━━━━━━━━━━━━━━
@@ -560,15 +544,14 @@ I'm **AniToon Bot**
 Choose an option below.
 """
 
-await query.message.edit_text(
-    text,
-    reply_markup=start_buttons(
-        is_owner(query.from_user.id)
+    await query.message.edit_text(
+        text,
+        reply_markup=start_buttons(
+            is_owner(query.from_user.id)
+        )
     )
-)
 
-await query.answer()
-
+    await query.answer()
 
 # ==========================================================
 # HELP
@@ -864,7 +847,11 @@ async def receive_text(client, message):
 # ==========================================================
 # THUMBNAIL CALLBACKS
 # ==========================================================
-
+@bot.on_message(filters.command("test"))
+async def test(client, message):
+    print("TEST RECEIVED")
+    await message.reply("Working!")
+    
 @bot.on_callback_query(filters.regex("^thumb_"))
 async def thumbnail_callbacks(client, query):
 
@@ -1148,6 +1135,7 @@ async def queue_runner():
 # ==========================================================
 
 async def bot_runner():
+
     try:
         print("Starting Telegram Bot...")
 
@@ -1156,24 +1144,13 @@ async def bot_runner():
         print("Bot connected to Telegram!")
 
         await init_database()
-
-        print("=" * 60)
-        print("🤖 AniToon Bot Started Successfully")
-        print("=" * 60)
-
+        
         asyncio.create_task(queue_runner())
 
         await idle()
 
-    except Exception:
-        import traceback
-        traceback.print_exc()
-
     finally:
-        try:
-            await bot.stop()
-        except:
-            pass
+        await bot.stop()
     
 # ==========================================================
 # FLASK THREAD
@@ -1202,8 +1179,6 @@ if __name__ == "__main__":
 
     asyncio.run(bot_runner())
 
-async def bot_runner():
-
     print("Starting Telegram Bot...")
 
     try:
@@ -1217,7 +1192,6 @@ async def bot_runner():
         return
 
     print("Starting Queue...")
-    asyncio.create_task(queue_runner())
 
     print("Waiting for updates...")
     await idle()
