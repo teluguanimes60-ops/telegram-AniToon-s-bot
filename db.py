@@ -225,6 +225,8 @@ async def get_stats():
 
 async def init_database():
 
+    await client.admin.command("ping")
+
     await users.create_index("last_seen")
     await thumbs.create_index("updated")
 
