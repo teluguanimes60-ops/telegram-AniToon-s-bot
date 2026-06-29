@@ -1137,17 +1137,19 @@ async def bot_runner():
     await bot.start()
 
     me = await bot.get_me()
+
     print(f"Logged in as @{me.username}")
 
     print("Bot connected!")
 
-try:
-    await init_database()
-    print("✅ Database initialized!")
+    try:
+        await init_database()
+        print("✅ Database initialized!")
 
-except Exception as e:
-    print("❌ Database Error:", e)
-    return
+    except Exception as e:
+        print(f"❌ Database Error: {e}")
+        await bot.stop()
+        return
 
     await idle()
 
