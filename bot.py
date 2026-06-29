@@ -21,7 +21,7 @@ from flask import Flask
 
 from pyrogram import idle
 
-from pyrogram import Client, filters, idle
+from pyrogram import Client, filters
 
 from pyrogram.types import (
 
@@ -30,8 +30,6 @@ from pyrogram.types import (
     InlineKeyboardButton
 
 )
-
-from database import init_database
 
 from buttons import (
 
@@ -1128,11 +1126,6 @@ async def queue_runner():
     except Exception as e:
         print("QUEUE ERROR :", e)
 
-
-# ==========================================================
-# START BOT
-# ==========================================================
-
 # ==========================================================
 # START BOT
 # ==========================================================
@@ -1141,12 +1134,9 @@ async def bot_runner():
 
     print("Starting Telegram Bot...")
 
-    await start_queue()
-
     await bot.start()
 
     me = await bot.get_me()
-
     print(f"Logged in as @{me.username}")
 
     print("Bot connected!")
@@ -1177,6 +1167,13 @@ def run_web():
 # MAIN
 # ==========================================================
 
+async def main():
+
+    await queue_runner()
+
+    await bot_runner()
+
+
 if __name__ == "__main__":
 
     threading.Thread(
@@ -1184,4 +1181,4 @@ if __name__ == "__main__":
         daemon=True
     ).start()
 
-    asyncio.run(bot_runner())
+    asyncio.run(main())
