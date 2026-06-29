@@ -1141,9 +1141,13 @@ async def bot_runner():
 
     print("Bot connected!")
 
+try:
     await init_database()
+    print("✅ Database initialized!")
 
-    print("Database initialized!")
+except Exception as e:
+    print("❌ Database Error:", e)
+    return
 
     await idle()
 
