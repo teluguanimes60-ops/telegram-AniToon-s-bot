@@ -225,11 +225,20 @@ async def get_stats():
 
 async def init_database():
 
-    await client.admin.command("ping")
+    try:
 
-    await users.create_index("last_seen")
-    await thumbs.create_index("updated")
+        await client.admin.command("ping")
 
-    await load_bot_settings()
+        await users.create_index("last_seen")
+        await thumbs.create_index("updated")
 
-    print("✅ MongoDB Connected Successfully")
+        await load_bot_settings()
+
+        print("✅ MongoDB Connected Successfully")
+
+    except Exception as e:
+
+        print("❌ MongoDB Connection Error")
+        print(e)
+
+        raise
