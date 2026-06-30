@@ -1130,11 +1130,21 @@ async def queue_runner():
 # START BOT
 # ==========================================================
 
+from pyrogram.errors import FloodWait
+import asyncio
+
 async def bot_runner():
 
     print("Starting Telegram Bot...")
 
-    await bot.start()
+    while True:
+        try:
+            await bot.start()
+            break
+
+        except FloodWait as e:
+            print(f"FloodWait: sleeping {e.value} seconds")
+            await asyncio.sleep(e.value)
 
     me = await bot.get_me()
 
