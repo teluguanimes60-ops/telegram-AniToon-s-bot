@@ -1158,7 +1158,6 @@ async def bot_runner():
 
     except Exception as e:
         print(f"❌ Database Error: {e}")
-        await bot.stop()
         return
 
     await idle()
@@ -1171,7 +1170,7 @@ async def bot_runner():
 
 def run_web():
 
-    app.run(
+    bot.run(
         host="0.0.0.0",
         port=PORT,
         debug=False,
@@ -1191,6 +1190,7 @@ async def main():
 
 
 if __name__ == "__main__":
+    asyncio.run(main())
 
     threading.Thread(
         target=run_web,
@@ -1198,3 +1198,9 @@ if __name__ == "__main__":
     ).start()
 
     asyncio.run(main())
+    
+await bot.start()
+
+await idle()
+
+await bot.stop()
