@@ -675,11 +675,6 @@ async def convert_callback(client, query):
 
     await query.answer()
 
-    # ==========================================================
-# FILE RECEIVER
-# bot.py (Part 3/5)
-# ==========================================================
-
 from media_info import build_media_text
 from thumbnail import save_thumb
 
