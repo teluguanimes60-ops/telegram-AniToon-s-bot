@@ -1167,17 +1167,13 @@ async def bot_runner():
 # ==========================================================
 # FLASK THREAD
 # ==========================================================
-
 def run_web():
-
-    bot.run(
+    app.run(
         host="0.0.0.0",
         port=PORT,
         debug=False,
         use_reloader=False
     )
-
-
 # ==========================================================
 # MAIN
 # ==========================================================
@@ -1190,7 +1186,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
 
     threading.Thread(
         target=run_web,
@@ -1199,8 +1194,3 @@ if __name__ == "__main__":
 
     asyncio.run(main())
     
-await bot.start()
-
-await idle()
-
-await bot.stop()
