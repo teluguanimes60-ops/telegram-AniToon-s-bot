@@ -709,7 +709,6 @@ async def receive_file(client, message):
             await wait.edit_text(text)
 
         finally:
-            import os
             if path and os.path.exists(path):
                 os.remove(path)
 
@@ -1066,6 +1065,23 @@ async def save_custom_thumb(client, message):
         message,
         "✅ Custom Thumbnail Saved.\n\n📥 Added to Queue..."
     )
+
+job = get_job(job_id)
+
+if not job:
+    return
+
+async def process_job():
+    await process_pipeline(
+        job_id,
+        job["original_message"],
+        bot
+    )
+
+await add_to_queue({
+    "uid": uid,
+    "handler": process_job
+})
 
 # ==========================================================
 # UNKNOWN COMMAND
