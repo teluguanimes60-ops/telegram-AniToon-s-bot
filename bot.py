@@ -126,7 +126,8 @@ from queue_system import (
 
 
 from engine import process_pipeline
-
+from media_info import build_media_text
+from thumbnail import save_thumb
 
 
 from instant_edit import (
@@ -675,9 +676,6 @@ async def convert_callback(client, query):
 
     await query.answer()
 
-from media_info import build_media_text
-from thumbnail import save_thumb
-
 @bot.on_message(
     filters.private
     & (
@@ -900,29 +898,7 @@ async def thumbnail_callbacks(client, query):
 # ==========================================================
 
 async def start_processing(job_id):
-
-    job = get_job(job_id)
-
-    if not job:
-        return
-
-    msg = job["original_message"]
-    uid = job["uid"]
-
-    clear_state(uid)
-
-    async def process_job():
-        await process_pipeline(
-            job_id,
-            job["original_message"],
-            bot
-        )
-
-    await add_to_queue({
-        "uid": uid,
-        "handler": process_job
-    })
-
+    
     await msg.reply_text(
         f"📥 Added to Queue\n\n"
         f"👥 Active Users : {active_count()}/20\n"
@@ -1069,10 +1045,22 @@ async def save_custom_thumb(client, message):
         "✅ Custom Thumbnail Saved.\n\n📥 Added to Queue..."
     )
 
-    job = get_job(job_id)
+job = get_job(job_id)
 
-    if not job:
-        return
+if not job:
+    return
+
+async def process_job():
+    await process_pipeline(
+        job_id,
+        job["original_message"],
+        bot
+    )
+
+await add_to_queue({
+    "uid": uid,
+    "handler": process_job
+})
 
 # ==========================================================
 # UNKNOWN COMMAND
@@ -1108,7 +1096,6 @@ async def queue_runner():
 # ==========================================================
 
 from pyrogram.errors import FloodWait
-import asyncio
 
 async def bot_runner():
 
