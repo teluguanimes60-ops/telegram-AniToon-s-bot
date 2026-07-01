@@ -1066,23 +1066,22 @@ async def save_custom_thumb(client, message):
         "✅ Custom Thumbnail Saved.\n\n📥 Added to Queue..."
     )
 
-job = get_job(job_id)
+    job = get_job(job_id)
 
-if not job:
-    return
+    if not job:
+        return
 
-async def process_job():
-    await process_pipeline(
-        job_id,
-        job["original_message"],
-        bot
-    )
+    async def process_job():
+        await process_pipeline(
+            job_id,
+            job["original_message"],
+            bot
+        )
 
-await add_to_queue({
-    "uid": uid,
-    "handler": process_job
-})
-
+    await add_to_queue({
+        "uid": uid,
+        "handler": process_job
+    })
 # ==========================================================
 # UNKNOWN COMMAND
 # ==========================================================
@@ -1118,22 +1117,21 @@ async def bot_runner():
     print("Starting Telegram Bot...")
 
     while True:
-        try:
-            await bot.start()
-            break
+try:
+    await init_database()
+    print("✅ Database initialized!")
 
-        except FloodWait as e:
-            print(f"FloodWait: sleeping {e.value} seconds")
-            await asyncio.sleep(e.value)
+except Exception as e:
+    print(f"❌ Database Error: {e}")
+    return
 
-    me = await bot.get_me()
+await bot.start()
 
-    print(f"Logged in as @{me.username}")
+me = await bot.get_me()
 
-    print("Bot connected!")
+print(f"Logged in as @{me.username}")
 
-    try:
-        await init_database()
+print("Bot connected!")
         print("✅ Database initialized!")
 
     except Exception as e:
