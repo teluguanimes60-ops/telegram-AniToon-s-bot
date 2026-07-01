@@ -145,27 +145,20 @@ from instant_edit import (
 
 # ==========================================================
 
-
-
 API_ID = int(os.environ["API_ID"])
 
 API_HASH = os.environ["API_HASH"]
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 
-
-
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
-
-
 
 PORT = int(os.environ.get("PORT", "10000"))
 
-
-
-CHANNEL_POST = "https://t.me/Anitoon_edit"
-
-
+CHANNEL_POST = os.environ.get(
+    "CHANNEL_POST",
+    "https://t.me/Anitoon_edit"
+)
 
 # ==========================================================
 
@@ -196,9 +189,6 @@ def home():
 # BOT
 
 # ==========================================================
-import logging
-
-logging.basicConfig(level=logging.INFO)
 
 bot = Client(
     "AniToonBot",
@@ -691,9 +681,17 @@ async def convert_callback(client, query):
 # ==========================================================
 
 from media_info import build_media_text
+from thumbnail import save_thumb
 
-
-@bot.on_message(filters.private & (filters.document | filters.video))
+@bot.on_message(
+    filters.private
+    & (
+        filters.document
+        | filters.video
+        | filters.audio
+        | filters.animation
+    )
+)
 async def receive_file(client, message):
 
     uid = message.from_user.id
@@ -844,10 +842,6 @@ async def receive_text(client, message):
 # ==========================================================
 # THUMBNAIL CALLBACKS
 # ==========================================================
-@bot.on_message(filters.command("test"))
-async def test(client, message):
-    print("TEST RECEIVED")
-    await message.reply("Working!")
     
 @bot.on_callback_query(filters.regex("^thumb_"))
 async def thumbnail_callbacks(client, query):
@@ -856,7 +850,10 @@ async def thumbnail_callbacks(client, query):
     state = get_state(uid)
 
     if "job_id" not in state:
-        return await query.answer("Job expired.")
+        return await query.answer(
+            "Job expired.",
+            show_alert=True
+        )
 
     job_id = state["job_id"]
 
@@ -919,14 +916,17 @@ async def start_processing(job_id):
 
     clear_state(uid)
 
-    await add_to_queue({
-        "uid": uid,
-        "handler": lambda: process_pipeline(
-            job_id,
-            msg,
-            bot
-        )
-    })
+async def process_job():
+    await process_pipeline(
+        job_id,
+        msg,
+        bot
+    )
+
+await add_to_queue({
+    "uid": uid,
+    "handler": process_job
+})
 
     await msg.reply_text(
         f"📥 Added to Queue\n\n"
@@ -942,7 +942,6 @@ async def start_processing(job_id):
 # ==========================================================
 
 from thumbnail import save_thumb
-from db import set_setting
 
 # ==========================================================
 # PAUSE
@@ -1087,15 +1086,17 @@ async def save_custom_thumb(client, message):
     if not job:
         return
 
-    await add_to_queue({
-        "uid": uid,
-        "handler": lambda: process_pipeline(
-            job_id,
-            job["original_message"],
-            bot
-        )
-    })
+ async def process_job():
+    await process_pipeline(
+        job_id,
+        job["original_message"],
+        bot
+    )
 
+await add_to_queue({
+    "uid": uid,
+    "handler": process_job
+})
 
 # ==========================================================
 # UNKNOWN COMMAND
@@ -1180,7 +1181,7 @@ def run_web():
 
 async def main():
 
-    await queue_runner()
+    asyncio.create_task(queue_runner())
 
     await bot_runner()
 
