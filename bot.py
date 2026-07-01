@@ -898,7 +898,29 @@ async def thumbnail_callbacks(client, query):
 # ==========================================================
 
 async def start_processing(job_id):
-    
+
+    job = get_job(job_id)
+
+    if not job:
+        return
+
+    msg = job["original_message"]
+    uid = job["uid"]
+
+    clear_state(uid)
+
+    async def process_job():
+        await process_pipeline(
+            job_id,
+            msg,
+            bot
+        )
+
+    await add_to_queue({
+        "uid": uid,
+        "handler": process_job
+    })
+
     await msg.reply_text(
         f"📥 Added to Queue\n\n"
         f"👥 Active Users : {active_count()}/20\n"
@@ -906,7 +928,7 @@ async def start_processing(job_id):
         f"📢 Subscribe before processing:\n"
         f"{CHANNEL_POST}"
     )
-
+    
 # ==========================================================
 # PAUSE
 # ==========================================================
@@ -1045,23 +1067,6 @@ async def save_custom_thumb(client, message):
         "✅ Custom Thumbnail Saved.\n\n📥 Added to Queue..."
     )
 
-job = get_job(job_id)
-
-if not job:
-    return
-
-async def process_job():
-    await process_pipeline(
-        job_id,
-        job["original_message"],
-        bot
-    )
-
-await add_to_queue({
-    "uid": uid,
-    "handler": process_job
-})
-
 # ==========================================================
 # UNKNOWN COMMAND
 # ==========================================================
@@ -1073,11 +1078,6 @@ async def unknown(client, message):
         message,
         "❌ Unknown command.\n\nUse /start"
     )
-
-    # ==========================================================
-# 🤖 AniToon Bot
-# bot.py (Part 5/5)
-# ==========================================================
 
 # ==========================================================
 # START QUEUE
